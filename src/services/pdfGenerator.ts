@@ -47,9 +47,9 @@ export const generatePDF = async (
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   
-  // DIMENSIONS EXACTES : 66mm x 91mm
-  const cardWidth = 66;
-  const cardHeight = 91;
+  // DIMENSIONS RÉDUITES DE 15% : 56.1mm x 77.35mm
+  const cardWidth = 56.1;
+  const cardHeight = 77.35;
   
   // Calculer combien de cartes peuvent tenir sur une page avec ces dimensions exactes
   const cardsPerRow = Math.floor(pageWidth / cardWidth);

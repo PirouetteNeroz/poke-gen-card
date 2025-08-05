@@ -21,9 +21,9 @@ export const generateTCGPDF = async (
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   
-  // Dimensions des cartes TCG: 66mm x 91mm
-  const cardWidth = 66;
-  const cardHeight = 91;
+  // Dimensions des cartes TCG réduites de 15%: 56.1mm x 77.35mm
+  const cardWidth = 56.1;
+  const cardHeight = 77.35;
   const cardsPerRow = Math.floor(pageWidth / cardWidth);
   const cardsPerCol = Math.floor(pageHeight / cardHeight);
   const cardsPerPage = cardsPerRow * cardsPerCol;
