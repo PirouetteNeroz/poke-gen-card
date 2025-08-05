@@ -65,19 +65,11 @@ export const generatePDF = async (
         pdf.addPage();
       }
       currentPage++;
-      
-      // Add page title with black color
-      pdf.setFontSize(14);
-      pdf.setTextColor(0, 0, 0); // Black color
-      const title = generation === 'all' 
-        ? `Pokédex Placeholder - Toutes les générations`
-        : `Pokédex Placeholder - Génération ${generation}`;
-      pdf.text(title, pageWidth / 2, 10, { align: 'center' });
     }
     
     // Calculate card position
     const x = col * cardWidth;
-    const y = 15 + row * cardHeight; // Start after title
+    const y = 10 + row * cardHeight; // Start from top
     
     // Draw cutting lines for binder insertion
     pdf.setDrawColor(200, 200, 200);
@@ -112,22 +104,21 @@ export const generatePDF = async (
     pdf.setLineWidth(0.8);
     pdf.rect(contentX, contentY, contentWidth, contentHeight);
     
-    // Add Pokemon generation
+    // Add Pokemon generation in top left
     const pokemonGen = getPokemonGeneration(pokemon.id);
     pdf.setFontSize(8);
     pdf.setTextColor(100, 100, 100);
     pdf.text(`Gen ${pokemonGen}`, contentX + 2, contentY + 8);
     
-    // Add Pokemon number
+    // Add HP placeholder in top right
     pdf.setFontSize(10);
-    pdf.setTextColor(0, 0, 0); // Black color as requested
-    const pokemonNumber = `#${pokemon.id.toString().padStart(4, '0')}`;
-    pdf.text(pokemonNumber, contentX + contentWidth - 2, contentY + 8, { align: 'right' });
+    pdf.setTextColor(80, 80, 80);
+    pdf.text(`HP ___`, contentX + contentWidth - 2, contentY + 8, { align: 'right' });
     
-    // Pokemon image area - larger and centered
-    const imageSize = Math.min(contentWidth * 0.6, contentHeight * 0.5);
+    // Pokemon image area - much larger and centered
+    const imageSize = Math.min(contentWidth * 0.8, contentHeight * 0.6);
     const imageX = contentX + (contentWidth / 2) - (imageSize / 2);
-    const imageY = contentY + 12;
+    const imageY = contentY + 15;
     
     // Try to add real Pokemon image
     if (pokemon.sprite) {
@@ -165,14 +156,29 @@ export const generatePDF = async (
     const displayName = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
     pdf.text(displayName, contentX + contentWidth / 2, nameY, { align: 'center' });
     
-    // Add types
+    // Add Pokemon number below name (as requested)
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(0, 0, 0);
+    const pokemonNumber = `#${pokemon.id.toString().padStart(4, '0')}`;
+    pdf.text(pokemonNumber, contentX + contentWidth / 2, nameY + 8, { align: 'center' });
+    
+    // Add types below number
     if (pokemon.types.length > 0) {
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(8);
       pdf.setTextColor(80, 80, 80);
       const typesText = pokemon.types.slice(0, 2).join(' • ');
-      pdf.text(typesText, contentX + contentWidth / 2, nameY + 6, { align: 'center' });
+      pdf.text(typesText, contentX + contentWidth / 2, nameY + 16, { align: 'center' });
     }
+    
+    // Add rarity placeholder at bottom
+    pdf.setFontSize(7);
+    pdf.setTextColor(120, 120, 120);
+    pdf.text('◆ Rare', contentX + 2, contentY + contentHeight - 3);
+    
+    // Add condition box at bottom right
+    pdf.text('État: ___', contentX + contentWidth - 2, contentY + contentHeight - 3, { align: 'right' });
     
     cardCount++;
     
