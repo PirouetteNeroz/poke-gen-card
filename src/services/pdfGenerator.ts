@@ -122,13 +122,13 @@ export const generatePDF = async (
     pdf.setFontSize(11);
     pdf.setTextColor(0, 0, 0);
     const displayName = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
-    const nameY = contentY + 18;
+    const nameY = contentY + 15;
     pdf.text(displayName, contentX + contentWidth / 2, nameY, { align: 'center' });
     
     // Zone image (sous le nom)
-    const imageSize = Math.min(contentWidth * 0.7, contentHeight * 0.5);
+    const imageSize = Math.min(contentWidth * 0.7, contentHeight * 0.45);
     const imageX = contentX + (contentWidth / 2) - (imageSize / 2);
-    const imageY = nameY + 8;
+    const imageY = nameY + 5;
     
     // Ajouter l'image du Pokémon
     if (pokemon.sprite) {
@@ -163,7 +163,7 @@ export const generatePDF = async (
     pdf.setFontSize(9);
     pdf.setTextColor(0, 0, 0);
     const pokemonNumber = `#${pokemon.id.toString().padStart(4, '0')}`;
-    const numberY = imageY + imageSize + 12;
+    const numberY = imageY + imageSize + 8;
     pdf.text(pokemonNumber, contentX + contentWidth / 2, numberY, { align: 'center' });
     
     cardCount++;
