@@ -76,6 +76,9 @@ const TCGPlaceholder = () => {
     ],
     "Fossil": [
       { id: "fossil", name: "Fossil", series: "Fossil", total: 62, releaseDate: "1999-10-10" }
+    ],
+    "Team Rocket": [
+      { id: "teamrocket", name: "Team Rocket", series: "Team Rocket", total: 83, releaseDate: "2000-04-24" }
     ]
   };
 
@@ -89,7 +92,7 @@ const TCGPlaceholder = () => {
 
   const handleLoadCards = async () => {
     if (!selectedSet) {
-      toast.error("Veuillez sélectionner une série");
+      toast.error("Veuillez sélectionner une extension");
       return;
     }
 
@@ -182,11 +185,11 @@ const TCGPlaceholder = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">
-                Série
+                Série TCG
               </label>
               <Select value={selectedSeries} onValueChange={handleSeriesChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez une série" />
+                  <SelectValue placeholder="Sélectionnez une série TCG" />
                 </SelectTrigger>
                 <SelectContent>
                   {mockSeries.map((series) => (
@@ -200,7 +203,7 @@ const TCGPlaceholder = () => {
             
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">
-                Extension
+                Extension/Set
               </label>
               <Select 
                 value={selectedSet} 
@@ -208,7 +211,7 @@ const TCGPlaceholder = () => {
                 disabled={!selectedSeries}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez une extension" />
+                  <SelectValue placeholder="Sélectionnez une extension/set" />
                 </SelectTrigger>
                 <SelectContent>
                   {tcgSets.map((set) => (
