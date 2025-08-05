@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Download, Loader2, FileText, Search, Sparkles } from "lucide-react";
+import { generateTCGPDF } from "@/services/tcgPdfGenerator";
 
 interface TCGSet {
   id: string;
@@ -34,38 +36,17 @@ const TCGPlaceholder = () => {
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>("");
 
-  // Mock data for demonstration (replace with real API calls)
+  // Données des séries
   const mockSeries = [
     "Base",
-    "Jungle",
-    "Fossil", 
+    "Jungle", 
+    "Fossil",
     "Team Rocket",
     "Gym Heroes",
-    "Gym Challenge",
-    "Neo Genesis",
-    "Neo Discovery",
-    "Neo Destiny",
-    "Neo Revelation",
-    "Expedition",
-    "Aquapolis",
-    "Skyridge",
-    "Ruby & Sapphire",
-    "Sandstorm",
-    "Dragon",
-    "Team Magma vs Team Aqua",
-    "Hidden Legends",
-    "FireRed & LeafGreen",
-    "Deoxys",
-    "Emerald",
-    "Unseen Forces",
-    "Delta Species",
-    "Legend Maker",
-    "Holon Phantoms",
-    "Crystal Guardians",
-    "Dragon Frontiers",
-    "Power Keepers"
+    "Neo Genesis"
   ];
 
+  // Données des extensions par série
   const mockSets: { [key: string]: TCGSet[] } = {
     "Base": [
       { id: "base1", name: "Base Set", series: "Base", total: 102, releaseDate: "1999-01-09" },
@@ -79,13 +60,19 @@ const TCGPlaceholder = () => {
     ],
     "Team Rocket": [
       { id: "teamrocket", name: "Team Rocket", series: "Team Rocket", total: 83, releaseDate: "2000-04-24" }
+    ],
+    "Gym Heroes": [
+      { id: "gymheroes", name: "Gym Heroes", series: "Gym Heroes", total: 132, releaseDate: "2000-08-14" }
+    ],
+    "Neo Genesis": [
+      { id: "neogenesis", name: "Neo Genesis", series: "Neo Genesis", total: 111, releaseDate: "2000-12-16" }
     ]
   };
 
   const handleSeriesChange = (series: string) => {
+    console.log("Série sélectionnée:", series);
     setSelectedSeries(series);
     setSelectedSet("");
-    // Fixed: Load sets for selected series
     setTcgSets(mockSets[series] || []);
     setTcgCards([]);
   };
@@ -101,29 +88,32 @@ const TCGPlaceholder = () => {
     setCurrentStep("Chargement des cartes...");
 
     try {
-      // Simulate API call - replace with real TCG Player API
       const selectedSetData = tcgSets.find(set => set.id === selectedSet);
       if (!selectedSetData) return;
 
+      console.log("Chargement des cartes pour:", selectedSetData);
+
       const mockCards: TCGCard[] = [];
+      const rarities = ['Common', 'Uncommon', 'Rare', 'Holo Rare', 'Ultra Rare'];
+      
       for (let i = 1; i <= selectedSetData.total; i++) {
         const progress = (i / selectedSetData.total) * 100;
         setProgress(progress);
         
         mockCards.push({
           id: `${selectedSet}-${i}`,
-          name: `Card ${i}`,
+          name: `${selectedSetData.series} Card ${i}`,
           number: i.toString().padStart(3, '0'),
-          rarity: ['Common', 'Uncommon', 'Rare', 'Holo Rare'][Math.floor(Math.random() * 4)],
+          rarity: rarities[Math.floor(Math.random() * rarities.length)],
           set: {
             name: selectedSetData.name,
             series: selectedSetData.series
           }
         });
 
-        // Simulate loading delay
-        if (i % 10 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 50));
+        // Simulation du délai
+        if (i % 20 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 
@@ -133,7 +123,7 @@ const TCGPlaceholder = () => {
       
       toast.success(`${mockCards.length} cartes chargées avec succès !`);
     } catch (error) {
-      console.error("Error loading cards:", error);
+      console.error("Erreur lors du chargement des cartes:", error);
       toast.error("Erreur lors du chargement des cartes");
     } finally {
       setIsLoading(false);
@@ -148,21 +138,26 @@ const TCGPlaceholder = () => {
       return;
     }
 
+    const selectedSetData = tcgSets.find(set => set.id === selectedSet);
+    if (!selectedSetData) return;
+
     setIsLoading(true);
     setProgress(0);
-    setCurrentStep("Génération du PDF...");
+    setCurrentStep("Génération du PDF TCG...");
 
     try {
-      // Simulate PDF generation - replace with real implementation
-      for (let i = 0; i <= 100; i += 10) {
-        setProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
+      await generateTCGPDF(
+        tcgCards,
+        selectedSetData.name,
+        (pdfProgress) => {
+          setProgress(pdfProgress);
+        }
+      );
 
       setCurrentStep("PDF généré !");
-      toast.success("PDF généré avec succès !");
+      toast.success("PDF TCG généré avec succès !");
     } catch (error) {
-      console.error("Error generating PDF:", error);
+      console.error("Erreur lors de la génération du PDF:", error);
       toast.error("Erreur lors de la génération du PDF");
     } finally {
       setIsLoading(false);
@@ -173,7 +168,7 @@ const TCGPlaceholder = () => {
 
   return (
     <div className="space-y-6">
-      {/* Controls */}
+      {/* Configuration */}
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -252,7 +247,7 @@ const TCGPlaceholder = () => {
             </Button>
           </div>
 
-          {/* Progress */}
+          {/* Progression */}
           {isLoading && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
@@ -265,7 +260,7 @@ const TCGPlaceholder = () => {
         </CardContent>
       </Card>
 
-      {/* Cards Preview */}
+      {/* Aperçu des cartes */}
       {tcgCards.length > 0 && (
         <Card className="shadow-card">
           <CardHeader>
@@ -280,10 +275,11 @@ const TCGPlaceholder = () => {
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
               {tcgCards.slice(0, 50).map((card) => (
-                <div key={card.id} className="border rounded-lg p-3 bg-card">
-                  <div className="text-sm font-medium mb-1">{card.name}</div>
+                <div key={card.id} className="border rounded-lg p-3 bg-card hover:shadow-md transition-shadow">
+                  <div className="text-sm font-medium mb-1 truncate">{card.name}</div>
                   <div className="text-xs text-muted-foreground">#{card.number}</div>
                   <div className="text-xs text-muted-foreground">{card.rarity}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{card.set.series}</div>
                 </div>
               ))}
               {tcgCards.length > 50 && (
@@ -298,16 +294,16 @@ const TCGPlaceholder = () => {
         </Card>
       )}
 
-      {/* Info Cards */}
+      {/* Cartes d'info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="text-center shadow-card hover:shadow-pokemon transition-all duration-300">
           <CardContent className="pt-6">
             <div className="w-12 h-12 bg-pokemon-red rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-6 h-6 text-white" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">API TCG Player</h3>
+            <h3 className="font-semibold text-lg mb-2">Extensions TCG</h3>
             <p className="text-muted-foreground text-sm">
-              Accès à toutes les séries et extensions officielles
+              Toutes les séries et extensions principales
             </p>
           </CardContent>
         </Card>
@@ -319,7 +315,7 @@ const TCGPlaceholder = () => {
             </div>
             <h3 className="font-semibold text-lg mb-2">Placeholders Organisés</h3>
             <p className="text-muted-foreground text-sm">
-              Création automatique de placeholders par série
+              PDF prêt pour votre classeur TCG
             </p>
           </CardContent>
         </Card>
