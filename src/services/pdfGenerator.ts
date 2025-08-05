@@ -46,18 +46,20 @@ export const generatePDF = async (
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   
-  // Card dimensions (9 cards per page in 3x3 grid) - Fill entire page
-  const cardWidth = pageWidth / 3; // Full width, 3 cards per row
-  const cardHeight = (pageHeight - 20) / 3; // Small top margin for title, 3 cards per column
-  const margin = 0;
+  // Standard Pokemon card dimensions: 63mm x 88mm
+  const cardWidth = 63; // Standard Pokemon card width
+  const cardHeight = 88; // Standard Pokemon card height
+  const cardsPerRow = Math.floor(pageWidth / cardWidth);
+  const cardsPerCol = Math.floor((pageHeight - 10) / cardHeight);
+  const cardsPerPage = cardsPerRow * cardsPerCol;
   
   let currentPage = 0;
   let cardCount = 0;
   
   for (let i = 0; i < pokemonList.length; i++) {
     const pokemon = pokemonList[i];
-    const row = Math.floor(cardCount / 3);
-    const col = cardCount % 3;
+    const row = Math.floor(cardCount / cardsPerRow);
+    const col = cardCount % cardsPerRow;
     
     // Add new page if needed
     if (cardCount === 0) {
@@ -104,21 +106,23 @@ export const generatePDF = async (
     pdf.setLineWidth(0.8);
     pdf.rect(contentX, contentY, contentWidth, contentHeight);
     
-    // Add Pokemon generation in top left
-    const pokemonGen = getPokemonGeneration(pokemon.id);
-    pdf.setFontSize(8);
-    pdf.setTextColor(100, 100, 100);
-    pdf.text(`Gen ${pokemonGen}`, contentX + 2, contentY + 8);
+    // Add Pokemon types in black box at top
+    if (pokemon.types.length > 0) {
+      pdf.setFillColor(0, 0, 0); // Black background
+      const typeBoxHeight = 8;
+      pdf.rect(contentX, contentY, contentWidth, typeBoxHeight, 'F');
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8);
+      pdf.setTextColor(255, 255, 255); // White text
+      const typesText = pokemon.types.slice(0, 2).join(' • ');
+      pdf.text(typesText, contentX + contentWidth / 2, contentY + 6, { align: 'center' });
+    }
     
-    // Add HP placeholder in top right
-    pdf.setFontSize(10);
-    pdf.setTextColor(80, 80, 80);
-    pdf.text(`HP ___`, contentX + contentWidth - 2, contentY + 8, { align: 'right' });
-    
-    // Pokemon image area - much larger and centered
-    const imageSize = Math.min(contentWidth * 0.8, contentHeight * 0.6);
+    // Pokemon image area - adjusted for type box
+    const imageSize = Math.min(contentWidth * 0.8, contentHeight * 0.5);
     const imageX = contentX + (contentWidth / 2) - (imageSize / 2);
-    const imageY = contentY + 15;
+    const imageY = contentY + 20; // More space for type box
     
     // Try to add real Pokemon image
     if (pokemon.sprite) {
@@ -163,27 +167,11 @@ export const generatePDF = async (
     const pokemonNumber = `#${pokemon.id.toString().padStart(4, '0')}`;
     pdf.text(pokemonNumber, contentX + contentWidth / 2, nameY + 8, { align: 'center' });
     
-    // Add types below number
-    if (pokemon.types.length > 0) {
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8);
-      pdf.setTextColor(80, 80, 80);
-      const typesText = pokemon.types.slice(0, 2).join(' • ');
-      pdf.text(typesText, contentX + contentWidth / 2, nameY + 16, { align: 'center' });
-    }
-    
-    // Add rarity placeholder at bottom
-    pdf.setFontSize(7);
-    pdf.setTextColor(120, 120, 120);
-    pdf.text('◆ Rare', contentX + 2, contentY + contentHeight - 3);
-    
-    // Add condition box at bottom right
-    pdf.text('État: ___', contentX + contentWidth - 2, contentY + contentHeight - 3, { align: 'right' });
     
     cardCount++;
     
-    // Reset card count for new page (9 cards per page)
-    if (cardCount >= 9) {
+    // Reset card count for new page
+    if (cardCount >= cardsPerPage) {
       cardCount = 0;
     }
     

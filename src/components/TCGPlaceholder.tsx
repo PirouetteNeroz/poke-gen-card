@@ -82,6 +82,7 @@ const TCGPlaceholder = () => {
   const handleSeriesChange = (series: string) => {
     setSelectedSeries(series);
     setSelectedSet("");
+    // Fixed: Load sets for selected series
     setTcgSets(mockSets[series] || []);
     setTcgCards([]);
   };
