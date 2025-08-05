@@ -85,7 +85,7 @@ const Index = () => {
         }
       );
 
-      setPokemonList(pokemon.slice(0, 18)); // Show first 18 for preview
+      setPokemonList(pokemon); // Show all cards for preview
       setCurrentStep("Aperçu chargé !");
       setProgress(100);
       
@@ -198,7 +198,7 @@ const Index = () => {
                 Aperçu des cartes (9 cartes par page PDF)
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Affichage des {pokemonList.length} premiers Pokémon
+                Affichage de {pokemonList.length} Pokémon
               </p>
             </CardHeader>
             <CardContent>
@@ -248,7 +248,7 @@ const Index = () => {
               </div>
               <h3 className="font-semibold text-lg mb-2">Toutes les Générations</h3>
               <p className="text-muted-foreground text-sm">
-                Plus de 1000 Pokémon des 9 générations
+                Plus de 1025 Pokémon des 9 générations
               </p>
             </CardContent>
           </Card>

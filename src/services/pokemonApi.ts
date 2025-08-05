@@ -49,8 +49,8 @@ export const getGenerationRange = (generation: string): { start: number; end: nu
     "6": { start: 650, end: 721 },
     "7": { start: 722, end: 809 },
     "8": { start: 810, end: 905 },
-    "9": { start: 906, end: 1010 },
-    "all": { start: 1, end: 1010 },
+    "9": { start: 906, end: 1025 },
+    "all": { start: 1, end: 1025 },
   };
   
   return ranges[generation] || ranges["1"];
