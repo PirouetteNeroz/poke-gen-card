@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-
+import pokemonLogo from '@/assets/pokemon-logo.png';
 
 interface Pokemon {
   id: number;
@@ -29,10 +29,33 @@ export const generateChecklistPDF = async (
   const colWidths = [20, columnWidth - 35, 15]; // Numéro, Nom, Case
   const leftColumnStart = margin;
   const rightColumnStart = margin + columnWidth + columnGap;
-
-    let currentY = margin + 35; // Plus d'espace pour le logo
+  
+  let currentY = margin + 35; // Plus d'espace pour le logo
   let pageNumber = 1;
-
+  
+  // Ajouter le logo Pokémon
+  try {
+    const logoHeight = 15;
+    const logoWidth = 40;
+    const logoX = (pageWidth - logoWidth) / 2;
+    const logoY = margin + 5;
+    
+    // Convertir l'image importée en base64 pour l'utiliser dans jsPDF
+    const response = await fetch(pokemonLogo);
+    const blob = await response.blob();
+    const reader = new FileReader();
+    
+    await new Promise((resolve) => {
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        pdf.addImage(base64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+        resolve(true);
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.log('Logo non disponible, continuation sans logo');
+  }
   
   // Titre
   pdf.setFont('helvetica', 'bold');
