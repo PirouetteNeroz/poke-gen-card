@@ -17,112 +17,145 @@ export const generateChecklistPDF = async (
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   
-  const margin = 15;
-  const tableWidth = pageWidth - (margin * 2);
-  const rowHeight = 8;
-  const headerHeight = 12;
+  const margin = 10;
+  const columnGap = 8;
+  const availableWidth = pageWidth - (margin * 2) - columnGap;
+  const columnWidth = availableWidth / 2;
+  const rowHeight = 6;
+  const headerHeight = 10;
   
-  // Colonnes du tableau
-  const colWidths = [25, tableWidth - 45, 20]; // Numéro, Nom, Case
-  const colPositions = [margin, margin + colWidths[0], margin + colWidths[0] + colWidths[1]];
+  // Colonnes du tableau pour chaque colonne de Pokémon
+  const colWidths = [20, columnWidth - 35, 15]; // Numéro, Nom, Case
+  const leftColumnStart = margin;
+  const rightColumnStart = margin + columnWidth + columnGap;
   
   let currentY = margin + 20;
   let pageNumber = 1;
   
   // Titre
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(16);
+  pdf.setFontSize(14);
   pdf.setTextColor(0, 0, 0);
   const title = generation === 'all' 
     ? 'Checklist Pokédex - Toutes générations' 
     : `Checklist Pokédex - Génération ${generation}`;
   pdf.text(title, pageWidth / 2, margin + 10, { align: 'center' });
   
-  // En-têtes du tableau
-  const drawHeader = (y: number) => {
+  // Fonction pour dessiner l'en-tête d'une colonne
+  const drawColumnHeader = (x: number, y: number) => {
+    const colPositions = [x, x + colWidths[0], x + colWidths[0] + colWidths[1]];
+    
     pdf.setFillColor(240, 240, 240);
-    pdf.rect(margin, y, tableWidth, headerHeight, 'F');
+    pdf.rect(x, y, columnWidth, headerHeight, 'F');
     
     pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(0.5);
-    pdf.rect(margin, y, tableWidth, headerHeight);
+    pdf.setLineWidth(0.4);
+    pdf.rect(x, y, columnWidth, headerHeight);
     
     // Lignes verticales
     pdf.line(colPositions[1], y, colPositions[1], y + headerHeight);
     pdf.line(colPositions[2], y, colPositions[2], y + headerHeight);
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(10);
+    pdf.setFontSize(8);
     pdf.setTextColor(0, 0, 0);
     
-    pdf.text('N°', colPositions[0] + colWidths[0] / 2, y + 7, { align: 'center' });
-    pdf.text('Nom du Pokémon', colPositions[1] + colWidths[1] / 2, y + 7, { align: 'center' });
-    pdf.text('Possédé', colPositions[2] + colWidths[2] / 2, y + 7, { align: 'center' });
+    pdf.text('N°', colPositions[0] + colWidths[0] / 2, y + 6, { align: 'center' });
+    pdf.text('Nom du Pokémon', colPositions[1] + colWidths[1] / 2, y + 6, { align: 'center' });
+    pdf.text('✓', colPositions[2] + colWidths[2] / 2, y + 6, { align: 'center' });
   };
   
-  drawHeader(currentY);
+  // Fonction pour dessiner une ligne de Pokémon dans une colonne
+  const drawPokemonRow = (pokemon: Pokemon, x: number, y: number, index: number) => {
+    const colPositions = [x, x + colWidths[0], x + colWidths[0] + colWidths[1]];
+    
+    // Fond de ligne alternée
+    if (index % 2 === 1) {
+      pdf.setFillColor(250, 250, 250);
+      pdf.rect(x, y, columnWidth, rowHeight, 'F');
+    }
+    
+    // Bordures de ligne
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.2);
+    pdf.rect(x, y, columnWidth, rowHeight);
+    
+    // Lignes verticales
+    pdf.line(colPositions[1], y, colPositions[1], y + rowHeight);
+    pdf.line(colPositions[2], y, colPositions[2], y + rowHeight);
+    
+    // Contenu des cellules
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    pdf.setTextColor(0, 0, 0);
+    
+    // Numéro
+    const pokemonNumber = `#${pokemon.id.toString().padStart(4, '0')}`;
+    pdf.text(pokemonNumber, colPositions[0] + colWidths[0] / 2, y + 4, { align: 'center' });
+    
+    // Nom (tronqué si trop long)
+    const displayName = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+    const maxNameLength = 12;
+    const truncatedName = displayName.length > maxNameLength 
+      ? displayName.substring(0, maxNameLength - 1) + '.' 
+      : displayName;
+    pdf.text(truncatedName, colPositions[1] + 1, y + 4);
+    
+    // Case à cocher
+    const checkboxSize = 3;
+    const checkboxX = colPositions[2] + (colWidths[2] - checkboxSize) / 2;
+    const checkboxY = y + (rowHeight - checkboxSize) / 2;
+    
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.3);
+    pdf.rect(checkboxX, checkboxY, checkboxSize, checkboxSize);
+  };
+  
+  // Dessiner les en-têtes des deux colonnes
+  drawColumnHeader(leftColumnStart, currentY);
+  drawColumnHeader(rightColumnStart, currentY);
   currentY += headerHeight;
   
-  const maxRowsPerPage = Math.floor((pageHeight - currentY - margin) / rowHeight);
+  const maxRowsPerPage = Math.floor((pageHeight - currentY - margin - 10) / rowHeight);
   let rowCount = 0;
+  let leftColumnIndex = 0;
+  let rightColumnIndex = 0;
   
-  for (let i = 0; i < pokemonList.length; i++) {
-    const pokemon = pokemonList[i];
-    
+  for (let i = 0; i < pokemonList.length; i += 2) {
     // Nouvelle page si nécessaire
     if (rowCount >= maxRowsPerPage) {
       pdf.addPage();
       pageNumber++;
       currentY = margin + 10;
-      drawHeader(currentY);
+      drawColumnHeader(leftColumnStart, currentY);
+      drawColumnHeader(rightColumnStart, currentY);
       currentY += headerHeight;
       rowCount = 0;
+      leftColumnIndex = 0;
+      rightColumnIndex = 0;
     }
     
-    // Fond de ligne alternée
-    if (i % 2 === 1) {
-      pdf.setFillColor(250, 250, 250);
-      pdf.rect(margin, currentY, tableWidth, rowHeight, 'F');
+    // Pokémon de gauche
+    const leftPokemon = pokemonList[i];
+    if (leftPokemon) {
+      drawPokemonRow(leftPokemon, leftColumnStart, currentY, leftColumnIndex);
+      leftColumnIndex++;
     }
     
-    // Bordures de ligne
-    pdf.setDrawColor(200, 200, 200);
-    pdf.setLineWidth(0.3);
-    pdf.rect(margin, currentY, tableWidth, rowHeight);
-    
-    // Lignes verticales
-    pdf.line(colPositions[1], currentY, colPositions[1], currentY + rowHeight);
-    pdf.line(colPositions[2], currentY, colPositions[2], currentY + rowHeight);
-    
-    // Contenu des cellules
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
-    pdf.setTextColor(0, 0, 0);
-    
-    // Numéro
-    const pokemonNumber = `#${pokemon.id.toString().padStart(4, '0')}`;
-    pdf.text(pokemonNumber, colPositions[0] + colWidths[0] / 2, currentY + 5.5, { align: 'center' });
-    
-    // Nom
-    const displayName = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
-    pdf.text(displayName, colPositions[1] + 3, currentY + 5.5);
-    
-    // Case à cocher
-    const checkboxSize = 4;
-    const checkboxX = colPositions[2] + (colWidths[2] - checkboxSize) / 2;
-    const checkboxY = currentY + (rowHeight - checkboxSize) / 2;
-    
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(0.5);
-    pdf.rect(checkboxX, checkboxY, checkboxSize, checkboxSize);
+    // Pokémon de droite (si il existe)
+    const rightPokemon = pokemonList[i + 1];
+    if (rightPokemon) {
+      drawPokemonRow(rightPokemon, rightColumnStart, currentY, rightColumnIndex);
+      rightColumnIndex++;
+    }
     
     currentY += rowHeight;
     rowCount++;
     
     // Progression
     if (onProgress) {
-      const progress = ((i + 1) / pokemonList.length) * 100;
-      onProgress(progress);
+      const progress = ((i + 2) / pokemonList.length) * 100;
+      onProgress(Math.min(progress, 100));
     }
   }
   
