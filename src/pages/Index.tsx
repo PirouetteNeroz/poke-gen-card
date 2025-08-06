@@ -9,6 +9,7 @@ import { PokemonCard } from "@/components/PokemonCard";
 import TCGPlaceholder from "@/components/TCGPlaceholder";
 import { fetchPokemonBatch } from "@/services/pokemonApi";
 import { generatePDF } from "@/services/pdfGenerator";
+import { generateChecklistPDF } from "@/services/checklistPdfGenerator";
 import { toast } from "sonner";
 import { Download, Loader2, FileText, Globe, Sparkles, Search } from "lucide-react";
 
@@ -26,6 +27,45 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>("");
+
+  const handleGenerateChecklistPDF = async () => {
+    setIsLoading(true);
+    setProgress(0);
+    setCurrentStep("Récupération des données Pokémon...");
+    
+    try {
+      const pokemonData = await fetchPokemonBatch(selectedGeneration, selectedLanguage, (progress) => {
+        if (progress <= 50) {
+          setProgress(progress);
+        }
+      });
+      
+      setCurrentStep("Génération du PDF checklist...");
+      
+      await generateChecklistPDF(
+        pokemonData, 
+        selectedGeneration, 
+        selectedLanguage, 
+        (progress) => {
+          setProgress(50 + (progress * 0.5));
+        }
+      );
+      
+      setProgress(100);
+      toast.success("PDF checklist généré avec succès !", {
+        description: `Checklist de ${pokemonData.length} Pokémon créée.`,
+      });
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF checklist:', error);
+      toast.error("Erreur lors de la génération du PDF checklist", {
+        description: "Une erreur est survenue lors de la génération du PDF checklist.",
+      });
+    } finally {
+      setIsLoading(false);
+      setProgress(0);
+      setCurrentStep("");
+    }
+  };
 
   const handleGeneratePDF = async () => {
     setIsLoading(true);
@@ -187,7 +227,20 @@ const Index = () => {
                     ) : (
                       <Download className="w-4 h-4 mr-2" />
                     )}
-                    Générer PDF
+                    Générer PDF Cartes
+                  </Button>
+                  <Button
+                    onClick={handleGenerateChecklistPDF}
+                    disabled={isLoading}
+                    variant="secondary"
+                    className="flex-1"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <FileText className="w-4 h-4 mr-2" />
+                    )}
+                    Checklist PDF
                   </Button>
                 </div>
 
