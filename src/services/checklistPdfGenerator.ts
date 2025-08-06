@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import pokemonLogo from '@/assets/pokemon-logo.png';
 
 interface Pokemon {
   id: number;
@@ -29,8 +30,32 @@ export const generateChecklistPDF = async (
   const leftColumnStart = margin;
   const rightColumnStart = margin + columnWidth + columnGap;
   
-  let currentY = margin + 20;
+  let currentY = margin + 35; // Plus d'espace pour le logo
   let pageNumber = 1;
+  
+  // Ajouter le logo Pokémon
+  try {
+    const logoHeight = 15;
+    const logoWidth = 40;
+    const logoX = (pageWidth - logoWidth) / 2;
+    const logoY = margin + 5;
+    
+    // Convertir l'image importée en base64 pour l'utiliser dans jsPDF
+    const response = await fetch(pokemonLogo);
+    const blob = await response.blob();
+    const reader = new FileReader();
+    
+    await new Promise((resolve) => {
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        pdf.addImage(base64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+        resolve(true);
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.log('Logo non disponible, continuation sans logo');
+  }
   
   // Titre
   pdf.setFont('helvetica', 'bold');
@@ -39,7 +64,7 @@ export const generateChecklistPDF = async (
   const title = generation === 'all' 
     ? 'Checklist Pokédex - Toutes générations' 
     : `Checklist Pokédex - Génération ${generation}`;
-  pdf.text(title, pageWidth / 2, margin + 10, { align: 'center' });
+  pdf.text(title, pageWidth / 2, margin + 25, { align: 'center' });
   
   // Fonction pour dessiner l'en-tête d'une colonne
   const drawColumnHeader = (x: number, y: number) => {
@@ -121,12 +146,43 @@ export const generateChecklistPDF = async (
   let leftColumnIndex = 0;
   let rightColumnIndex = 0;
   
-  for (let i = 0; i < pokemonList.length; i += 2) {
+  // Séparer les Pokémon en deux colonnes pour que les numéros se suivent verticalement
+  const halfLength = Math.ceil(pokemonList.length / 2);
+  const leftColumnPokemon = pokemonList.slice(0, halfLength);
+  const rightColumnPokemon = pokemonList.slice(halfLength);
+  
+  const maxRows = Math.max(leftColumnPokemon.length, rightColumnPokemon.length);
+  
+  for (let i = 0; i < maxRows; i++) {
     // Nouvelle page si nécessaire
     if (rowCount >= maxRowsPerPage) {
       pdf.addPage();
       pageNumber++;
-      currentY = margin + 10;
+      currentY = margin + 35; // Espace pour le logo
+      
+      // Redessiner le logo sur la nouvelle page
+      try {
+        const logoHeight = 15;
+        const logoWidth = 40;
+        const logoX = (pageWidth - logoWidth) / 2;
+        const logoY = margin + 5;
+        
+        const response = await fetch(pokemonLogo);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        
+        await new Promise((resolve) => {
+          reader.onload = () => {
+            const base64 = reader.result as string;
+            pdf.addImage(base64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+            resolve(true);
+          };
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.log('Logo non disponible sur nouvelle page');
+      }
+      
       drawColumnHeader(leftColumnStart, currentY);
       drawColumnHeader(rightColumnStart, currentY);
       currentY += headerHeight;
@@ -135,15 +191,15 @@ export const generateChecklistPDF = async (
       rightColumnIndex = 0;
     }
     
-    // Pokémon de gauche
-    const leftPokemon = pokemonList[i];
+    // Pokémon de la colonne de gauche
+    const leftPokemon = leftColumnPokemon[i];
     if (leftPokemon) {
       drawPokemonRow(leftPokemon, leftColumnStart, currentY, leftColumnIndex);
       leftColumnIndex++;
     }
     
-    // Pokémon de droite (si il existe)
-    const rightPokemon = pokemonList[i + 1];
+    // Pokémon de la colonne de droite
+    const rightPokemon = rightColumnPokemon[i];
     if (rightPokemon) {
       drawPokemonRow(rightPokemon, rightColumnStart, currentY, rightColumnIndex);
       rightColumnIndex++;
@@ -154,7 +210,7 @@ export const generateChecklistPDF = async (
     
     // Progression
     if (onProgress) {
-      const progress = ((i + 2) / pokemonList.length) * 100;
+      const progress = ((i + 1) / maxRows) * 100;
       onProgress(Math.min(progress, 100));
     }
   }
