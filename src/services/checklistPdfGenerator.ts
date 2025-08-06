@@ -29,7 +29,9 @@ export const generateChecklistPDF = async (
   const colWidths = [20, columnWidth - 35, 15]; // Numéro, Nom, Case
   const leftColumnStart = margin;
   const rightColumnStart = margin + columnWidth + columnGap;
-  
+
+    let currentY = margin + 35; // Plus d'espace pour le logo
+  let pageNumber = 1;
 
   
   // Titre
