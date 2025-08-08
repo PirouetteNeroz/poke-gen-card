@@ -137,20 +137,13 @@ export const generateChecklistPDF = async (
   currentY += headerHeight;
   
   const maxRowsPerPage = Math.floor((pageHeight - currentY - margin - 10) / rowHeight);
-  let rowCount = 0;
-  let leftColumnIndex = 0;
-  let rightColumnIndex = 0;
+  const pokemonPerPage = maxRowsPerPage * 2; // 2 colonnes par page
   
-  // Séparer les Pokémon en deux colonnes pour que les numéros se suivent verticalement
-  const halfLength = Math.ceil(pokemonList.length / 2);
-  const leftColumnPokemon = pokemonList.slice(0, halfLength);
-  const rightColumnPokemon = pokemonList.slice(halfLength);
+  let pokemonIndex = 0;
   
-  const maxRows = Math.max(leftColumnPokemon.length, rightColumnPokemon.length);
-  
-  for (let i = 0; i < maxRows; i++) {
-    // Nouvelle page si nécessaire
-    if (rowCount >= maxRowsPerPage) {
+  while (pokemonIndex < pokemonList.length) {
+    // Si ce n'est pas la première page, créer une nouvelle page
+    if (pokemonIndex > 0) {
       pdf.addPage();
       pageNumber++;
       currentY = margin + 20; // Espace pour le titre
@@ -158,31 +151,40 @@ export const generateChecklistPDF = async (
       drawColumnHeader(leftColumnStart, currentY);
       drawColumnHeader(rightColumnStart, currentY);
       currentY += headerHeight;
-      rowCount = 0;
-      leftColumnIndex = 0;
-      rightColumnIndex = 0;
     }
     
-    // Pokémon de la colonne de gauche
-    const leftPokemon = leftColumnPokemon[i];
-    if (leftPokemon) {
-      drawPokemonRow(leftPokemon, leftColumnStart, currentY, leftColumnIndex);
-      leftColumnIndex++;
+    // Prendre les Pokémon pour cette page
+    const currentPagePokemon = pokemonList.slice(pokemonIndex, pokemonIndex + pokemonPerPage);
+    
+    // Séparer en deux colonnes pour cette page
+    const halfLength = Math.ceil(currentPagePokemon.length / 2);
+    const leftColumnPokemon = currentPagePokemon.slice(0, halfLength);
+    const rightColumnPokemon = currentPagePokemon.slice(halfLength);
+    
+    const maxRows = Math.max(leftColumnPokemon.length, rightColumnPokemon.length);
+    
+    // Dessiner les Pokémon de cette page
+    for (let i = 0; i < maxRows; i++) {
+      // Pokémon de la colonne de gauche
+      const leftPokemon = leftColumnPokemon[i];
+      if (leftPokemon) {
+        drawPokemonRow(leftPokemon, leftColumnStart, currentY, i);
+      }
+      
+      // Pokémon de la colonne de droite
+      const rightPokemon = rightColumnPokemon[i];
+      if (rightPokemon) {
+        drawPokemonRow(rightPokemon, rightColumnStart, currentY, i);
+      }
+      
+      currentY += rowHeight;
     }
     
-    // Pokémon de la colonne de droite
-    const rightPokemon = rightColumnPokemon[i];
-    if (rightPokemon) {
-      drawPokemonRow(rightPokemon, rightColumnStart, currentY, rightColumnIndex);
-      rightColumnIndex++;
-    }
-    
-    currentY += rowHeight;
-    rowCount++;
+    pokemonIndex += pokemonPerPage;
     
     // Progression
     if (onProgress) {
-      const progress = ((i + 1) / maxRows) * 100;
+      const progress = (pokemonIndex / pokemonList.length) * 100;
       onProgress(Math.min(progress, 100));
     }
   }
