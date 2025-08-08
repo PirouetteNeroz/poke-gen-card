@@ -67,55 +67,49 @@ export const generatePDF = async (
   let currentPage = 0;
   let cardCount = 0;
   
-  // Ajouter une page de titre élégante
+  // Ajouter une page de titre sobre pour impression
   const addTitlePage = () => {
-    // Fond dégradé élégant
-    const gradientSteps = 50;
-    for (let i = 0; i < gradientSteps; i++) {
-      const ratio = i / gradientSteps;
-      const r = Math.round(59 + (99 - 59) * ratio);
-      const g = Math.round(130 + (102 - 130) * ratio);
-      const b = Math.round(246 + (241 - 246) * ratio);
-      
-      pdf.setFillColor(r, g, b);
-      pdf.rect(0, (pageHeight / gradientSteps) * i, pageWidth, pageHeight / gradientSteps + 1, 'F');
-    }
+    // Fond blanc (pas de couleur ajoutée, fond par défaut)
     
-    // Titre principal avec style avancé
+    // Titre principal en noir
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(24);
-    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(28);
+    pdf.setTextColor(0, 0, 0);
     const title = generation === 'all' 
       ? 'Collection Pokédex - Toutes Générations' 
       : `Collection Pokédex - Génération ${generation}`;
-    pdf.text(title, pageWidth / 2, pageHeight / 2 - 20, { align: 'center' });
+    pdf.text(title, pageWidth / 2, pageHeight / 2 - 30, { align: 'center' });
     
-    // Sous-titre
+    // Sous-titre en gris foncé
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(14);
-    pdf.setTextColor(230, 240, 255);
-    pdf.text('Cartes de collection à découper', pageWidth / 2, pageHeight / 2 - 5, { align: 'center' });
+    pdf.setFontSize(16);
+    pdf.setTextColor(60, 60, 60);
+    pdf.text('Cartes de collection à découper', pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
     
-    // Statistiques
+    // Statistiques en gris
     pdf.setFontSize(12);
-    pdf.setTextColor(200, 220, 255);
+    pdf.setTextColor(100, 100, 100);
     const totalText = pokemonList.length > maxPokemon 
       ? `${limitedPokemonList.length} Pokémon inclus (sur ${pokemonList.length} total)`
       : `${limitedPokemonList.length} Pokémon inclus`;
     pdf.text(totalText, pageWidth / 2, pageHeight / 2 + 10, { align: 'center' });
     
-    // Éléments décoratifs
-    pdf.setDrawColor(255, 255, 255);
-    pdf.setLineWidth(2);
-    const decorLength = 40;
+    // Ligne décorative simple en noir
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(1);
+    const decorLength = 50;
     pdf.line(pageWidth / 2 - decorLength, pageHeight / 2 + 25, pageWidth / 2 + decorLength, pageHeight / 2 + 25);
     
-    // Petits cercles décoratifs
-    pdf.setFillColor(255, 255, 255);
-    for (let i = 0; i < 5; i++) {
-      const x = pageWidth / 2 - 20 + i * 10;
-      pdf.circle(x, pageHeight / 2 + 35, 1, 'F');
-    }
+    // Bordure de page simple
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(2);
+    pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
+    
+    // Date de génération
+    pdf.setFontSize(10);
+    pdf.setTextColor(120, 120, 120);
+    const currentDate = new Date().toLocaleDateString('fr-FR');
+    pdf.text(`Généré le ${currentDate}`, pageWidth / 2, pageHeight - 25, { align: 'center' });
   };
   
   addTitlePage();
