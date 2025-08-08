@@ -43,6 +43,10 @@ export const generatePDF = async (
   language: string,
   onProgress?: (progress: number) => void
 ): Promise<void> => {
+  // Limiter le nombre de Pokémon pour éviter l'erreur de mémoire
+  const maxPokemon = 500;
+  const limitedPokemonList = pokemonList.slice(0, maxPokemon);
+  
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -95,7 +99,10 @@ export const generatePDF = async (
     // Statistiques
     pdf.setFontSize(12);
     pdf.setTextColor(200, 220, 255);
-    pdf.text(`${pokemonList.length} Pokémon inclus`, pageWidth / 2, pageHeight / 2 + 10, { align: 'center' });
+    const totalText = pokemonList.length > maxPokemon 
+      ? `${limitedPokemonList.length} Pokémon inclus (sur ${pokemonList.length} total)`
+      : `${limitedPokemonList.length} Pokémon inclus`;
+    pdf.text(totalText, pageWidth / 2, pageHeight / 2 + 10, { align: 'center' });
     
     // Éléments décoratifs
     pdf.setDrawColor(255, 255, 255);
@@ -113,8 +120,8 @@ export const generatePDF = async (
   
   addTitlePage();
   
-  for (let i = 0; i < pokemonList.length; i++) {
-    const pokemon = pokemonList[i];
+  for (let i = 0; i < limitedPokemonList.length; i++) {
+    const pokemon = limitedPokemonList[i];
     const row = Math.floor(cardCount / cardsPerRow);
     const col = cardCount % cardsPerRow;
     
@@ -153,19 +160,14 @@ export const generatePDF = async (
     pdf.setFillColor(250, 252, 255);
     pdf.rect(contentX, contentY, contentWidth, contentHeight, 'F');
     
-    // Bordure de carte colorée avec ombre
-    pdf.setDrawColor(59, 130, 246);
-    pdf.setLineWidth(1.2);
+    // Bordure de carte noire continue
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(1.5);
     pdf.rect(contentX, contentY, contentWidth, contentHeight);
-    
-    // Ombre subtile (décalée)
-    pdf.setDrawColor(200, 210, 230);
-    pdf.setLineWidth(0.5);
-    pdf.rect(contentX + 0.5, contentY + 0.5, contentWidth, contentHeight);
     
     // Badge génération élégant en haut à gauche
     const pokemonGen = getPokemonGeneration(pokemon.id);
-    pdf.setFillColor(99, 102, 241);
+    pdf.setFillColor(0, 0, 0);
     const badgeWidth = 18;
     const badgeHeight = 8;
     pdf.roundedRect(contentX + 2, contentY + 3, badgeWidth, badgeHeight, 2, 2, 'F');
@@ -178,13 +180,13 @@ export const generatePDF = async (
     // NOM DU POKEMON avec style amélioré
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(12);
-    pdf.setTextColor(30, 58, 138);
+    pdf.setTextColor(0, 0, 0);
     const displayName = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
     const nameY = contentY + 20;
     pdf.text(displayName, contentX + contentWidth / 2, nameY, { align: 'center' });
     
     // Ligne décorative sous le nom
-    pdf.setDrawColor(99, 102, 241);
+    pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(0.8);
     const lineWidth = Math.min(displayName.length * 4, contentWidth * 0.7);
     pdf.line(
@@ -194,24 +196,10 @@ export const generatePDF = async (
       nameY + 2
     );
     
-    // Zone image avec cadre décoratif
+    // Zone image sans cadre
     const imageSize = Math.min(contentWidth * 0.7, contentHeight * 0.45);
     const imageX = contentX + (contentWidth / 2) - (imageSize / 2);
     const imageY = nameY + 8;
-    
-    // Cadre décoratif pour l'image
-    const frameSize = imageSize + 4;
-    const frameX = imageX - 2;
-    const frameY = imageY - 2;
-    
-    // Fond du cadre avec dégradé
-    pdf.setFillColor(230, 238, 250);
-    pdf.roundedRect(frameX, frameY, frameSize, frameSize, 3, 3, 'F');
-    
-    // Bordure du cadre
-    pdf.setDrawColor(59, 130, 246);
-    pdf.setLineWidth(0.8);
-    pdf.roundedRect(frameX, frameY, frameSize, frameSize, 3, 3);
     
     // Ajouter l'image du Pokémon
     if (pokemon.sprite) {
@@ -220,12 +208,12 @@ export const generatePDF = async (
         if (base64Image) {
           pdf.addImage(base64Image, 'PNG', imageX, imageY, imageSize, imageSize);
         } else {
-          // Placeholder élégant
+          // Placeholder simple
           pdf.setFillColor(248, 250, 252);
-          pdf.roundedRect(imageX, imageY, imageSize, imageSize, 2, 2, 'F');
-          pdf.setDrawColor(156, 163, 175);
+          pdf.rect(imageX, imageY, imageSize, imageSize, 'F');
+          pdf.setDrawColor(0, 0, 0);
           pdf.setLineWidth(1);
-          pdf.roundedRect(imageX, imageY, imageSize, imageSize, 2, 2);
+          pdf.rect(imageX, imageY, imageSize, imageSize);
           
           // Icône pokéball stylisée
           pdf.setFillColor(220, 38, 38);
@@ -234,12 +222,12 @@ export const generatePDF = async (
           pdf.circle(imageX + imageSize / 2, imageY + imageSize / 2, imageSize / 12, 'F');
         }
       } catch (error) {
-        // Placeholder élégant
+        // Placeholder simple
         pdf.setFillColor(248, 250, 252);
-        pdf.roundedRect(imageX, imageY, imageSize, imageSize, 2, 2, 'F');
-        pdf.setDrawColor(156, 163, 175);
+        pdf.rect(imageX, imageY, imageSize, imageSize, 'F');
+        pdf.setDrawColor(0, 0, 0);
         pdf.setLineWidth(1);
-        pdf.roundedRect(imageX, imageY, imageSize, imageSize, 2, 2);
+        pdf.rect(imageX, imageY, imageSize, imageSize);
         
         // Icône pokéball stylisée
         pdf.setFillColor(220, 38, 38);
@@ -251,14 +239,14 @@ export const generatePDF = async (
     
     // Numéro du Pokémon avec style amélioré
     const pokemonNumber = `#${pokemon.id.toString().padStart(4, '0')}`;
-    const numberY = imageY + frameSize + 8;
+    const numberY = imageY + imageSize + 8;
     
     // Badge pour le numéro
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
     const numberWidth = pdf.getTextWidth(pokemonNumber) + 6;
     
-    pdf.setFillColor(30, 58, 138);
+    pdf.setFillColor(0, 0, 0);
     pdf.roundedRect(
       contentX + (contentWidth - numberWidth) / 2, 
       numberY - 4, 
@@ -270,16 +258,6 @@ export const generatePDF = async (
     pdf.setTextColor(255, 255, 255);
     pdf.text(pokemonNumber, contentX + contentWidth / 2, numberY + 1, { align: 'center' });
     
-    // Types du Pokémon en bas (si espace disponible)
-    if (pokemon.types && pokemon.types.length > 0 && contentHeight > 75) {
-      const typesY = numberY + 12;
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7);
-      pdf.setTextColor(75, 85, 99);
-      
-      const typesText = pokemon.types.join(' • ').toUpperCase();
-      pdf.text(typesText, contentX + contentWidth / 2, typesY, { align: 'center' });
-    }
     
     cardCount++;
     
@@ -290,7 +268,7 @@ export const generatePDF = async (
     
     // Progression
     if (onProgress) {
-      const progress = ((i + 1) / pokemonList.length) * 100;
+      const progress = ((i + 1) / limitedPokemonList.length) * 100;
       onProgress(progress);
     }
   }
