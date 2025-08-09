@@ -1,12 +1,14 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Download, Loader2, FileText, Search, Sparkles } from "lucide-react";
+import { Download, Loader2, FileText, Search, Sparkles, Key, AlertCircle } from "lucide-react";
 import { generateTCGPDF } from "@/services/tcgPdfGenerator";
+import { cardtraderAPI, type CardTraderGame, type CardTraderExpansion, type CardTraderBlueprint } from "@/services/cardtraderApi";
 
 interface TCGSet {
   id: string;
@@ -28,57 +30,89 @@ interface TCGCard {
 }
 
 const TCGPlaceholder = () => {
-  const [selectedSeries, setSelectedSeries] = useState<string>("");
-  const [selectedSet, setSelectedSet] = useState<string>("");
-  const [tcgSets, setTcgSets] = useState<TCGSet[]>([]);
+  const [apiKey, setApiKey] = useState<string>("");
+  const [isApiKeySet, setIsApiKeySet] = useState(false);
+  const [games, setGames] = useState<CardTraderGame[]>([]);
+  const [selectedGame, setSelectedGame] = useState<string>("");
+  const [selectedExpansion, setSelectedExpansion] = useState<string>("");
+  const [expansions, setExpansions] = useState<CardTraderExpansion[]>([]);
   const [tcgCards, setTcgCards] = useState<TCGCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>("");
 
-  // Données des séries
-  const mockSeries = [
-    "Base",
-    "Jungle", 
-    "Fossil",
-    "Team Rocket",
-    "Gym Heroes",
-    "Neo Genesis"
-  ];
+  useEffect(() => {
+    const savedApiKey = localStorage.getItem('cardtrader-api-key');
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+      setIsApiKeySet(true);
+      cardtraderAPI.setApiKey(savedApiKey);
+      loadGames();
+    }
+  }, []);
 
-  // Données des extensions par série
-  const mockSets: { [key: string]: TCGSet[] } = {
-    "Base": [
-      { id: "base1", name: "Base Set", series: "Base", total: 102, releaseDate: "1999-01-09" },
-      { id: "base2", name: "Base Set 2", series: "Base", total: 130, releaseDate: "2000-02-24" }
-    ],
-    "Jungle": [
-      { id: "jungle", name: "Jungle", series: "Jungle", total: 64, releaseDate: "1999-06-16" }
-    ],
-    "Fossil": [
-      { id: "fossil", name: "Fossil", series: "Fossil", total: 62, releaseDate: "1999-10-10" }
-    ],
-    "Team Rocket": [
-      { id: "teamrocket", name: "Team Rocket", series: "Team Rocket", total: 83, releaseDate: "2000-04-24" }
-    ],
-    "Gym Heroes": [
-      { id: "gymheroes", name: "Gym Heroes", series: "Gym Heroes", total: 132, releaseDate: "2000-08-14" }
-    ],
-    "Neo Genesis": [
-      { id: "neogenesis", name: "Neo Genesis", series: "Neo Genesis", total: 111, releaseDate: "2000-12-16" }
-    ]
+  const handleApiKeySubmit = () => {
+    if (!apiKey.trim()) {
+      toast.error("Veuillez saisir votre clé API");
+      return;
+    }
+    
+    localStorage.setItem('cardtrader-api-key', apiKey);
+    cardtraderAPI.setApiKey(apiKey);
+    setIsApiKeySet(true);
+    loadGames();
+    toast.success("Clé API configurée avec succès !");
   };
 
-  const handleSeriesChange = (series: string) => {
-    console.log("Série sélectionnée:", series);
-    setSelectedSeries(series);
-    setSelectedSet("");
-    setTcgSets(mockSets[series] || []);
+  const loadGames = async () => {
+    setIsLoading(true);
+    setCurrentStep("Chargement des jeux...");
+    
+    try {
+      const gamesList = await cardtraderAPI.getGames();
+      setGames(gamesList);
+      setCurrentStep("Jeux chargés !");
+    } catch (error) {
+      console.error("Erreur lors du chargement des jeux:", error);
+      toast.error(error instanceof Error ? error.message : "Erreur lors du chargement des jeux");
+      // Reset API key on error
+      if (error instanceof Error && error.message.includes('Clé API')) {
+        setIsApiKeySet(false);
+        localStorage.removeItem('cardtrader-api-key');
+      }
+    } finally {
+      setIsLoading(false);
+      setCurrentStep("");
+    }
+  };
+
+  const handleGameChange = async (gameId: string) => {
+    console.log("Jeu sélectionné:", gameId);
+    setSelectedGame(gameId);
+    setSelectedExpansion("");
+    setExpansions([]);
     setTcgCards([]);
+    
+    if (!gameId) return;
+    
+    setIsLoading(true);
+    setCurrentStep("Chargement des extensions...");
+    
+    try {
+      const expansionsList = await cardtraderAPI.getExpansions(parseInt(gameId));
+      setExpansions(expansionsList);
+      setCurrentStep("Extensions chargées !");
+    } catch (error) {
+      console.error("Erreur lors du chargement des extensions:", error);
+      toast.error("Erreur lors du chargement des extensions");
+    } finally {
+      setIsLoading(false);
+      setCurrentStep("");
+    }
   };
 
   const handleLoadCards = async () => {
-    if (!selectedSet) {
+    if (!selectedExpansion) {
       toast.error("Veuillez sélectionner une extension");
       return;
     }
@@ -88,40 +122,33 @@ const TCGPlaceholder = () => {
     setCurrentStep("Chargement des cartes...");
 
     try {
-      const selectedSetData = tcgSets.find(set => set.id === selectedSet);
-      if (!selectedSetData) return;
+      const selectedExpansionData = expansions.find(exp => exp.id.toString() === selectedExpansion);
+      if (!selectedExpansionData) return;
 
-      console.log("Chargement des cartes pour:", selectedSetData);
+      console.log("Chargement des cartes pour:", selectedExpansionData);
 
-      const mockCards: TCGCard[] = [];
-      const rarities = ['Common', 'Uncommon', 'Rare', 'Holo Rare', 'Ultra Rare'];
+      const blueprints = await cardtraderAPI.getBlueprints(selectedExpansionData.id);
       
-      for (let i = 1; i <= selectedSetData.total; i++) {
-        const progress = (i / selectedSetData.total) * 100;
-        setProgress(progress);
+      const cards: TCGCard[] = blueprints.map((blueprint, index) => {
+        setProgress(((index + 1) / blueprints.length) * 100);
         
-        mockCards.push({
-          id: `${selectedSet}-${i}`,
-          name: `${selectedSetData.series} Card ${i}`,
-          number: i.toString().padStart(3, '0'),
-          rarity: rarities[Math.floor(Math.random() * rarities.length)],
+        return {
+          id: blueprint.id.toString(),
+          name: blueprint.name,
+          number: blueprint.collector_number || (index + 1).toString().padStart(3, '0'),
+          rarity: blueprint.rarity || 'Unknown',
           set: {
-            name: selectedSetData.name,
-            series: selectedSetData.series
+            name: selectedExpansionData.name,
+            series: games.find(g => g.id === selectedExpansionData.game_id)?.name || 'Unknown'
           }
-        });
+        };
+      });
 
-        // Simulation du délai
-        if (i % 20 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      }
-
-      setTcgCards(mockCards);
+      setTcgCards(cards);
       setCurrentStep("Cartes chargées !");
       setProgress(100);
       
-      toast.success(`${mockCards.length} cartes chargées avec succès !`);
+      toast.success(`${cards.length} cartes chargées avec succès !`);
     } catch (error) {
       console.error("Erreur lors du chargement des cartes:", error);
       toast.error("Erreur lors du chargement des cartes");
@@ -138,8 +165,8 @@ const TCGPlaceholder = () => {
       return;
     }
 
-    const selectedSetData = tcgSets.find(set => set.id === selectedSet);
-    if (!selectedSetData) return;
+    const selectedExpansionData = expansions.find(exp => exp.id.toString() === selectedExpansion);
+    if (!selectedExpansionData) return;
 
     setIsLoading(true);
     setProgress(0);
@@ -148,7 +175,7 @@ const TCGPlaceholder = () => {
     try {
       await generateTCGPDF(
         tcgCards,
-        selectedSetData.name,
+        selectedExpansionData.name,
         (pdfProgress) => {
           setProgress(pdfProgress);
         }
@@ -168,61 +195,117 @@ const TCGPlaceholder = () => {
 
   return (
     <div className="space-y-6">
-      {/* Configuration */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="w-5 h-5" />
-            Configuration TCG
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
-                Série TCG
-              </label>
-              <Select value={selectedSeries} onValueChange={handleSeriesChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez une série TCG" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockSeries.map((series) => (
-                    <SelectItem key={series} value={series}>
-                      {series}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      {/* Configuration de l'API */}
+      {!isApiKeySet && (
+        <Card className="shadow-card border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+              <Key className="w-5 h-5" />
+              Configuration API CardTrader
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                  Clé API CardTrader requise
+                </p>
+                <p className="text-blue-700 dark:text-blue-300">
+                  Pour utiliser cette fonctionnalité, vous devez créer un compte sur{" "}
+                  <a href="https://www.cardtrader.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                    CardTrader.com
+                  </a>{" "}
+                  et obtenir votre clé API dans les paramètres de votre compte.
+                </p>
+              </div>
             </div>
             
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">
-                Extension/Set
+                Clé API CardTrader
               </label>
-              <Select 
-                value={selectedSet} 
-                onValueChange={setSelectedSet}
-                disabled={!selectedSeries}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez une extension/set" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tcgSets.map((set) => (
-                    <SelectItem key={set.id} value={set.id}>
-                      {set.name} ({set.total} cartes)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  placeholder="Saisissez votre clé API CardTrader..."
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={handleApiKeySubmit}
+                  disabled={!apiKey.trim() || isLoading}
+                  variant="outline"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Configurer"
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Configuration TCG */}
+      {isApiKeySet && (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="w-5 h-5" />
+              Configuration TCG avec CardTrader API
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Jeu TCG
+                </label>
+                <Select value={selectedGame} onValueChange={handleGameChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez un jeu TCG" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {games.map((game) => (
+                      <SelectItem key={game.id} value={game.id.toString()}>
+                        {game.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Extension/Set
+                </label>
+                <Select 
+                  value={selectedExpansion} 
+                  onValueChange={setSelectedExpansion}
+                  disabled={!selectedGame}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez une extension/set" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {expansions.map((expansion) => (
+                      <SelectItem key={expansion.id} value={expansion.id.toString()}>
+                        {expansion.name} {expansion.total_cards && `(${expansion.total_cards} cartes)`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           
           <div className="flex flex-col sm:flex-row gap-4">
             <Button
               onClick={handleLoadCards}
-              disabled={isLoading || !selectedSet}
+              disabled={isLoading || !selectedExpansion}
               variant="outline"
               className="flex-1"
             >
@@ -245,6 +328,26 @@ const TCGPlaceholder = () => {
               )}
               Générer PDF TCG
             </Button>
+            
+            {isApiKeySet && (
+              <Button
+                onClick={() => {
+                  setIsApiKeySet(false);
+                  localStorage.removeItem('cardtrader-api-key');
+                  setGames([]);
+                  setExpansions([]);
+                  setTcgCards([]);
+                  setSelectedGame("");
+                  setSelectedExpansion("");
+                }}
+                variant="outline"
+                size="sm"
+                className="text-muted-foreground"
+              >
+                <Key className="w-4 h-4 mr-2" />
+                Changer clé API
+              </Button>
+            )}
           </div>
 
           {/* Progression */}
@@ -257,8 +360,9 @@ const TCGPlaceholder = () => {
               <Progress value={progress} className="h-2" />
             </div>
           )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Aperçu des cartes */}
       {tcgCards.length > 0 && (
@@ -269,7 +373,7 @@ const TCGPlaceholder = () => {
               Aperçu des cartes TCG
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {tcgCards.length} cartes trouvées dans {tcgSets.find(s => s.id === selectedSet)?.name}
+              {tcgCards.length} cartes trouvées dans {expansions.find(e => e.id.toString() === selectedExpansion)?.name}
             </p>
           </CardHeader>
           <CardContent>
@@ -301,9 +405,9 @@ const TCGPlaceholder = () => {
             <div className="w-12 h-12 bg-pokemon-red rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-6 h-6 text-white" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">Extensions TCG</h3>
+            <h3 className="font-semibold text-lg mb-2">API CardTrader</h3>
             <p className="text-muted-foreground text-sm">
-              Toutes les séries et extensions principales
+              Données officielles de tous les jeux TCG
             </p>
           </CardContent>
         </Card>
