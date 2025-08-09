@@ -32,8 +32,6 @@ interface TCGCard {
 const TCGPlaceholder = () => {
   const [apiKey, setApiKey] = useState<string>("");
   const [isApiKeySet, setIsApiKeySet] = useState(false);
-  const [games, setGames] = useState<CardTraderGame[]>([]);
-  const [selectedGame, setSelectedGame] = useState<string>("");
   const [selectedExpansion, setSelectedExpansion] = useState<string>("");
   const [expansions, setExpansions] = useState<CardTraderExpansion[]>([]);
   const [tcgCards, setTcgCards] = useState<TCGCard[]>([]);
@@ -47,7 +45,7 @@ const TCGPlaceholder = () => {
       setApiKey(savedApiKey);
       setIsApiKeySet(true);
       cardtraderAPI.setApiKey(savedApiKey);
-      loadGames();
+      loadPokemonExpansions();
     }
   }, []);
 
@@ -60,21 +58,23 @@ const TCGPlaceholder = () => {
     localStorage.setItem('cardtrader-api-key', apiKey);
     cardtraderAPI.setApiKey(apiKey);
     setIsApiKeySet(true);
-    loadGames();
+    loadPokemonExpansions();
     toast.success("Clé API configurée avec succès !");
   };
 
-  const loadGames = async () => {
+  const loadPokemonExpansions = async () => {
     setIsLoading(true);
-    setCurrentStep("Chargement des jeux...");
+    setCurrentStep("Chargement des extensions Pokémon...");
     
     try {
-      const gamesList = await cardtraderAPI.getGames();
-      setGames(gamesList);
-      setCurrentStep("Jeux chargés !");
+      // Pokémon game ID is 5 based on the API response
+      const expansionsList = await cardtraderAPI.getExpansions(5);
+      setExpansions(expansionsList);
+      setCurrentStep("Extensions Pokémon chargées !");
+      toast.success(`${expansionsList.length} extensions Pokémon trouvées !`);
     } catch (error) {
-      console.error("Erreur lors du chargement des jeux:", error);
-      toast.error(error instanceof Error ? error.message : "Erreur lors du chargement des jeux");
+      console.error("Erreur lors du chargement des extensions:", error);
+      toast.error(error instanceof Error ? error.message : "Erreur lors du chargement des extensions");
       // Reset API key on error
       if (error instanceof Error && error.message.includes('Clé API')) {
         setIsApiKeySet(false);
@@ -86,30 +86,6 @@ const TCGPlaceholder = () => {
     }
   };
 
-  const handleGameChange = async (gameId: string) => {
-    console.log("Jeu sélectionné:", gameId);
-    setSelectedGame(gameId);
-    setSelectedExpansion("");
-    setExpansions([]);
-    setTcgCards([]);
-    
-    if (!gameId) return;
-    
-    setIsLoading(true);
-    setCurrentStep("Chargement des extensions...");
-    
-    try {
-      const expansionsList = await cardtraderAPI.getExpansions(parseInt(gameId));
-      setExpansions(expansionsList);
-      setCurrentStep("Extensions chargées !");
-    } catch (error) {
-      console.error("Erreur lors du chargement des extensions:", error);
-      toast.error("Erreur lors du chargement des extensions");
-    } finally {
-      setIsLoading(false);
-      setCurrentStep("");
-    }
-  };
 
   const handleLoadCards = async () => {
     if (!selectedExpansion) {
@@ -139,7 +115,7 @@ const TCGPlaceholder = () => {
           rarity: blueprint.rarity || 'Unknown',
           set: {
             name: selectedExpansionData.name,
-            series: games.find(g => g.id === selectedExpansionData.game_id)?.name || 'Unknown'
+            series: 'Pokémon'
           }
         };
       });
@@ -256,50 +232,33 @@ const TCGPlaceholder = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="w-5 h-5" />
-              Configuration TCG avec CardTrader API
+              Extensions Pokémon TCG
             </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {expansions.length > 0 ? `${expansions.length} extensions Pokémon disponibles` : 'Chargement des extensions...'}
+            </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
-                  Jeu TCG
-                </label>
-                <Select value={selectedGame} onValueChange={handleGameChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez un jeu TCG" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {games.map((game) => (
-                      <SelectItem key={game.id} value={game.id.toString()}>
-                        {game.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
-                  Extension/Set
-                </label>
-                <Select 
-                  value={selectedExpansion} 
-                  onValueChange={setSelectedExpansion}
-                  disabled={!selectedGame}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez une extension/set" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {expansions.map((expansion) => (
-                      <SelectItem key={expansion.id} value={expansion.id.toString()}>
-                        {expansion.name} {expansion.total_cards && `(${expansion.total_cards} cartes)`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Extension Pokémon
+              </label>
+              <Select 
+                value={selectedExpansion} 
+                onValueChange={setSelectedExpansion}
+                disabled={expansions.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez une extension Pokémon" />
+                </SelectTrigger>
+                <SelectContent className="max-h-96">
+                  {expansions.map((expansion) => (
+                    <SelectItem key={expansion.id} value={expansion.id.toString()}>
+                      {expansion.name} {expansion.total_cards && `(${expansion.total_cards} cartes)`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           
           <div className="flex flex-col sm:flex-row gap-4">
@@ -334,10 +293,8 @@ const TCGPlaceholder = () => {
                 onClick={() => {
                   setIsApiKeySet(false);
                   localStorage.removeItem('cardtrader-api-key');
-                  setGames([]);
                   setExpansions([]);
                   setTcgCards([]);
-                  setSelectedGame("");
                   setSelectedExpansion("");
                 }}
                 variant="outline"
@@ -370,7 +327,7 @@ const TCGPlaceholder = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              Aperçu des cartes TCG
+              Aperçu des cartes Pokémon
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {tcgCards.length} cartes trouvées dans {expansions.find(e => e.id.toString() === selectedExpansion)?.name}
@@ -407,7 +364,7 @@ const TCGPlaceholder = () => {
             </div>
             <h3 className="font-semibold text-lg mb-2">API CardTrader</h3>
             <p className="text-muted-foreground text-sm">
-              Données officielles de tous les jeux TCG
+              Données officielles Pokémon TCG
             </p>
           </CardContent>
         </Card>
@@ -419,7 +376,7 @@ const TCGPlaceholder = () => {
             </div>
             <h3 className="font-semibold text-lg mb-2">Placeholders Organisés</h3>
             <p className="text-muted-foreground text-sm">
-              PDF prêt pour votre classeur TCG
+              PDF prêt pour votre classeur Pokémon
             </p>
           </CardContent>
         </Card>
