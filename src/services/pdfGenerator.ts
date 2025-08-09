@@ -67,6 +67,60 @@ export const generatePDF = async (
   let currentPage = 0;
   let cardCount = 0;
   
+  // Traductions pour la page de titre
+  const translations = {
+    fr: {
+      title: generation === 'all' ? 'Collection Pokédex - Toutes Générations' : `Collection Pokédex - Génération ${generation}`,
+      subtitle: 'Cartes de collection à découper',
+      included: pokemonList.length > maxPokemon 
+        ? `${limitedPokemonList.length} Pokémon inclus (sur ${pokemonList.length} total)`
+        : `${limitedPokemonList.length} Pokémon inclus`,
+      generated: `Généré le`
+    },
+    en: {
+      title: generation === 'all' ? 'Pokédex Collection - All Generations' : `Pokédex Collection - Generation ${generation}`,
+      subtitle: 'Trading cards to cut out',
+      included: pokemonList.length > maxPokemon 
+        ? `${limitedPokemonList.length} Pokémon included (out of ${pokemonList.length} total)`
+        : `${limitedPokemonList.length} Pokémon included`,
+      generated: `Generated on`
+    },
+    ja: {
+      title: generation === 'all' ? 'ポケモン図鑑コレクション - 全世代' : `ポケモン図鑑コレクション - 第${generation}世代`,
+      subtitle: '切り取り用トレーディングカード',
+      included: pokemonList.length > maxPokemon 
+        ? `${limitedPokemonList.length}匹のポケモンを含む（合計${pokemonList.length}匹中）`
+        : `${limitedPokemonList.length}匹のポケモンを含む`,
+      generated: `生成日`
+    },
+    de: {
+      title: generation === 'all' ? 'Pokédex-Sammlung - Alle Generationen' : `Pokédex-Sammlung - Generation ${generation}`,
+      subtitle: 'Sammelkarten zum Ausschneiden',
+      included: pokemonList.length > maxPokemon 
+        ? `${limitedPokemonList.length} Pokémon enthalten (von ${pokemonList.length} insgesamt)`
+        : `${limitedPokemonList.length} Pokémon enthalten`,
+      generated: `Erstellt am`
+    },
+    es: {
+      title: generation === 'all' ? 'Colección Pokédex - Todas las Generaciones' : `Colección Pokédex - Generación ${generation}`,
+      subtitle: 'Cartas coleccionables para recortar',
+      included: pokemonList.length > maxPokemon 
+        ? `${limitedPokemonList.length} Pokémon incluidos (de ${pokemonList.length} en total)`
+        : `${limitedPokemonList.length} Pokémon incluidos`,
+      generated: `Generado el`
+    },
+    it: {
+      title: generation === 'all' ? 'Collezione Pokédex - Tutte le Generazioni' : `Collezione Pokédex - Generazione ${generation}`,
+      subtitle: 'Carte da collezione da ritagliare',
+      included: pokemonList.length > maxPokemon 
+        ? `${limitedPokemonList.length} Pokémon inclusi (su ${pokemonList.length} totali)`
+        : `${limitedPokemonList.length} Pokémon inclusi`,
+      generated: `Generato il`
+    }
+  };
+
+  const t = translations[language as keyof typeof translations] || translations.fr;
+
   // Ajouter une page de titre sobre pour impression
   const addTitlePage = () => {
     // Fond blanc (pas de couleur ajoutée, fond par défaut)
@@ -75,24 +129,18 @@ export const generatePDF = async (
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(28);
     pdf.setTextColor(0, 0, 0);
-    const title = generation === 'all' 
-      ? 'Collection Pokédex - Toutes Générations' 
-      : `Collection Pokédex - Génération ${generation}`;
-    pdf.text(title, pageWidth / 2, pageHeight / 2 - 30, { align: 'center' });
+    pdf.text(t.title, pageWidth / 2, pageHeight / 2 - 30, { align: 'center' });
     
     // Sous-titre en gris foncé
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(16);
     pdf.setTextColor(60, 60, 60);
-    pdf.text('Cartes de collection à découper', pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
+    pdf.text(t.subtitle, pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
     
     // Statistiques en gris
     pdf.setFontSize(12);
     pdf.setTextColor(100, 100, 100);
-    const totalText = pokemonList.length > maxPokemon 
-      ? `${limitedPokemonList.length} Pokémon inclus (sur ${pokemonList.length} total)`
-      : `${limitedPokemonList.length} Pokémon inclus`;
-    pdf.text(totalText, pageWidth / 2, pageHeight / 2 + 10, { align: 'center' });
+    pdf.text(t.included, pageWidth / 2, pageHeight / 2 + 10, { align: 'center' });
     
     // Ligne décorative simple en noir
     pdf.setDrawColor(0, 0, 0);
@@ -108,8 +156,8 @@ export const generatePDF = async (
     // Date de génération
     pdf.setFontSize(10);
     pdf.setTextColor(120, 120, 120);
-    const currentDate = new Date().toLocaleDateString('fr-FR');
-    pdf.text(`Généré le ${currentDate}`, pageWidth / 2, pageHeight - 25, { align: 'center' });
+    const currentDate = new Date().toLocaleDateString(language === 'en' ? 'en-US' : language === 'ja' ? 'ja-JP' : language === 'de' ? 'de-DE' : language === 'es' ? 'es-ES' : language === 'it' ? 'it-IT' : 'fr-FR');
+    pdf.text(`${t.generated} ${currentDate}`, pageWidth / 2, pageHeight - 25, { align: 'center' });
   };
   
   addTitlePage();
