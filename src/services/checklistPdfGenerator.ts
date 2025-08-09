@@ -32,14 +32,59 @@ export const generateChecklistPDF = async (
   let currentY = margin + 20; // Espace pour le titre
   let pageNumber = 1;
   
+  // Traductions pour la checklist
+  const translations = {
+    fr: {
+      title: generation === 'all' ? 'Checklist Pokédex - Toutes générations' : `Checklist Pokédex - Génération ${generation}`,
+      numberCol: 'N°',
+      nameCol: 'Nom du Pokémon',
+      checkCol: '✓',
+      total: 'Total'
+    },
+    en: {
+      title: generation === 'all' ? 'Pokédex Checklist - All generations' : `Pokédex Checklist - Generation ${generation}`,
+      numberCol: 'No.',
+      nameCol: 'Pokémon Name',
+      checkCol: '✓',
+      total: 'Total'
+    },
+    ja: {
+      title: generation === 'all' ? 'ポケモン図鑑チェックリスト - 全世代' : `ポケモン図鑑チェックリスト - 第${generation}世代`,
+      numberCol: '番号',
+      nameCol: 'ポケモン名',
+      checkCol: '✓',
+      total: '合計'
+    },
+    de: {
+      title: generation === 'all' ? 'Pokédex-Checkliste - Alle Generationen' : `Pokédex-Checkliste - Generation ${generation}`,
+      numberCol: 'Nr.',
+      nameCol: 'Pokémon-Name',
+      checkCol: '✓',
+      total: 'Gesamt'
+    },
+    es: {
+      title: generation === 'all' ? 'Lista Pokédex - Todas las generaciones' : `Lista Pokédex - Generación ${generation}`,
+      numberCol: 'N°',
+      nameCol: 'Nombre del Pokémon',
+      checkCol: '✓',
+      total: 'Total'
+    },
+    it: {
+      title: generation === 'all' ? 'Checklist Pokédex - Tutte le generazioni' : `Checklist Pokédex - Generazione ${generation}`,
+      numberCol: 'N°',
+      nameCol: 'Nome del Pokémon',
+      checkCol: '✓',
+      total: 'Totale'
+    }
+  };
+
+  const t = translations[language as keyof typeof translations] || translations.fr;
+  
   // Titre avec style amélioré
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(16);
   pdf.setTextColor(30, 58, 138); // Bleu foncé élégant
-  const title = generation === 'all' 
-    ? 'Checklist Pokédex - Toutes générations' 
-    : `Checklist Pokédex - Génération ${generation}`;
-  pdf.text(title, pageWidth / 2, margin + 15, { align: 'center' });
+  pdf.text(t.title, pageWidth / 2, margin + 15, { align: 'center' });
   
   // Ligne décorative sous le titre
   pdf.setDrawColor(59, 130, 246); // Bleu
@@ -69,9 +114,9 @@ export const generateChecklistPDF = async (
     pdf.setFontSize(9);
     pdf.setTextColor(30, 58, 138); // Bleu foncé
     
-    pdf.text('N°', colPositions[0] + colWidths[0] / 2, y + 7.5, { align: 'center' });
-    pdf.text('Nom du Pokémon', colPositions[1] + colWidths[1] / 2, y + 7.5, { align: 'center' });
-    pdf.text('✓', colPositions[2] + colWidths[2] / 2, y + 7.5, { align: 'center' });
+    pdf.text(t.numberCol, colPositions[0] + colWidths[0] / 2, y + 7.5, { align: 'center' });
+    pdf.text(t.nameCol, colPositions[1] + colWidths[1] / 2, y + 7.5, { align: 'center' });
+    pdf.text(t.checkCol, colPositions[2] + colWidths[2] / 2, y + 7.5, { align: 'center' });
   };
   
   // Fonction pour dessiner une ligne de Pokémon dans une colonne
@@ -200,7 +245,7 @@ export const generateChecklistPDF = async (
     pdf.text(`Page ${p} / ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
     
     // Statistiques
-    const stats = `Total: ${pokemonList.length} Pokémon`;
+    const stats = `${t.total}: ${pokemonList.length} Pokémon`;
     pdf.text(stats, margin, pageHeight - 10);
   }
   
