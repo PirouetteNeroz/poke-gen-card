@@ -170,24 +170,25 @@ export const generateTCGPDF = async (
     const col = cardCount % cardsPerRow;
     
     // Try to get Pokemon sprite, fallback to TCG card image
-    let pokemonSprite = null;
+    let cardImage = null;
     try {
       const spriteUrl = await getPokemonSprite(card.name);
       if (spriteUrl) {
-        pokemonSprite = await getImageAsBase64(spriteUrl);
+        cardImage = await getImageAsBase64(spriteUrl);
       }
     } catch (error) {
       console.log(`Could not load sprite for ${card.name}`);
     }
     
     // If no Pokemon sprite and TCG card has image, use that instead
-    if (!pokemonSprite && card.images?.small) {
+    if (!cardImage && card.images?.small) {
       try {
-        pokemonSprite = await getImageAsBase64(card.images.small);
+        cardImage = await getImageAsBase64(card.images.small);
       } catch (error) {
         console.log(`Could not load TCG card image for ${card.name}`);
       }
     }
+    
     
     if (cardCount === 0) {
       pdf.addPage();
@@ -270,10 +271,10 @@ export const generateTCGPDF = async (
     const imageX = contentX + (contentWidth / 2) - (imageSize / 2);
     const imageY = nameY + 8;
     
-    if (pokemonSprite) {
+    if (cardImage) {
       // Afficher l'image (Pokémon ou carte TCG)
       try {
-        pdf.addImage(pokemonSprite, 'PNG', imageX, imageY, imageSize, imageSize);
+        pdf.addImage(cardImage, 'PNG', imageX, imageY, imageSize, imageSize);
       } catch (error) {
         console.log(`Could not add image for ${card.name}`);
         // Placeholder simple sans rond rouge
