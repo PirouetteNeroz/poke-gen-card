@@ -171,22 +171,34 @@ export const generateTCGPDF = async (
     
     // Try to get Pokemon sprite, fallback to TCG card image
     let cardImage = null;
+    
+    // First try Pokemon sprite
     try {
       const spriteUrl = await getPokemonSprite(card.name);
       if (spriteUrl) {
+        console.log(`Loading Pokemon sprite for ${card.name}: ${spriteUrl}`);
         cardImage = await getImageAsBase64(spriteUrl);
+        console.log(`Successfully loaded Pokemon sprite for ${card.name}`);
       }
     } catch (error) {
-      console.log(`Could not load sprite for ${card.name}`);
+      console.log(`Could not load sprite for ${card.name}:`, error);
     }
     
-    // If no Pokemon sprite and TCG card has image, use that instead
+    // If no Pokemon sprite, try TCG card image
     if (!cardImage && card.images?.small) {
       try {
+        console.log(`Loading TCG card image for ${card.name}: ${card.images.small}`);
         cardImage = await getImageAsBase64(card.images.small);
+        console.log(`Successfully loaded TCG card image for ${card.name}`);
       } catch (error) {
-        console.log(`Could not load TCG card image for ${card.name}`);
+        console.log(`Could not load TCG card image for ${card.name}:`, error);
       }
+    }
+    
+    // Log final result
+    console.log(`Final image status for ${card.name}: ${cardImage ? 'has image' : 'no image'}`);
+    if (!cardImage) {
+      console.log(`Card object for ${card.name}:`, card);
     }
     
     
