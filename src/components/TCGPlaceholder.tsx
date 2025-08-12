@@ -10,6 +10,11 @@ import { Download, Loader2, FileText, Search, Sparkles, Key, AlertCircle } from 
 import { generateTCGPDF } from "@/services/tcgPdfGenerator";
 import { cardtraderAPI, type CardTraderGame, type CardTraderExpansion, type CardTraderBlueprint } from "@/services/cardtraderApi";
 
+interface PokemonSeries {
+  name: string;
+  expansions: CardTraderExpansion[];
+}
+
 interface TCGSet {
   id: string;
   name: string;
@@ -33,7 +38,9 @@ const TCGPlaceholder = () => {
   const [apiKey, setApiKey] = useState<string>("");
   const [isApiKeySet, setIsApiKeySet] = useState(false);
   const [selectedExpansion, setSelectedExpansion] = useState<string>("");
+  const [selectedSeries, setSelectedSeries] = useState<string>("");
   const [expansions, setExpansions] = useState<CardTraderExpansion[]>([]);
+  const [pokemonSeries, setPokemonSeries] = useState<PokemonSeries[]>([]);
   const [tcgCards, setTcgCards] = useState<TCGCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -62,6 +69,72 @@ const TCGPlaceholder = () => {
     toast.success("Clé API configurée avec succès !");
   };
 
+  const organizePokemonSeries = (expansions: CardTraderExpansion[]) => {
+    const seriesMap = new Map<string, CardTraderExpansion[]>();
+    
+    expansions.forEach(expansion => {
+      let seriesName = "Autres";
+      
+      // Détection des séries principales basée sur le nom
+      if (expansion.name.includes("Base Set") || expansion.name.includes("Jungle") || expansion.name.includes("Fossil")) {
+        seriesName = "Classique (1998-2000)";
+      } else if (expansion.name.includes("Neo ")) {
+        seriesName = "Neo (2000-2001)";
+      } else if (expansion.name.includes("e-Card") || expansion.name.includes("Expedition") || expansion.name.includes("Aquapolis") || expansion.name.includes("Skyridge")) {
+        seriesName = "e-Card (2002-2003)";
+      } else if (expansion.name.includes("EX") && !expansion.name.includes("TAG TEAM")) {
+        seriesName = "EX (2003-2007)";
+      } else if (expansion.name.includes("Diamond") || expansion.name.includes("Pearl") || expansion.name.includes("Platinum")) {
+        seriesName = "Diamond & Pearl (2007-2009)";
+      } else if (expansion.name.includes("HeartGold") || expansion.name.includes("SoulSilver") || expansion.name.includes("HGSS")) {
+        seriesName = "HeartGold & SoulSilver (2010-2011)";
+      } else if (expansion.name.includes("Black") || expansion.name.includes("White") || expansion.name.includes("BW")) {
+        seriesName = "Black & White (2011-2013)";
+      } else if (expansion.name.includes("XY") || expansion.name.includes("Kalos")) {
+        seriesName = "XY (2014-2016)";
+      } else if (expansion.name.includes("Sun") || expansion.name.includes("Moon") || expansion.name.includes("SM") || expansion.name.includes("Alola")) {
+        seriesName = "Sun & Moon (2017-2019)";
+      } else if (expansion.name.includes("Sword") || expansion.name.includes("Shield") || expansion.name.includes("SWSH") || expansion.name.includes("Galar")) {
+        seriesName = "Sword & Shield (2020-2022)";
+      } else if (expansion.name.includes("Scarlet") || expansion.name.includes("Violet") || expansion.name.includes("SV") || expansion.name.includes("Paldea") || expansion.name.includes("151")) {
+        seriesName = "Scarlet & Violet (2023+)";
+      }
+      
+      if (!seriesMap.has(seriesName)) {
+        seriesMap.set(seriesName, []);
+      }
+      seriesMap.get(seriesName)!.push(expansion);
+    });
+    
+    // Convertir en tableau et trier
+    const series = Array.from(seriesMap.entries()).map(([name, expansions]) => ({
+      name,
+      expansions: expansions.sort((a, b) => a.name.localeCompare(b.name))
+    }));
+    
+    // Trier les séries par ordre chronologique
+    const seriesOrder = [
+      "Classique (1998-2000)",
+      "Neo (2000-2001)", 
+      "e-Card (2002-2003)",
+      "EX (2003-2007)",
+      "Diamond & Pearl (2007-2009)",
+      "HeartGold & SoulSilver (2010-2011)",
+      "Black & White (2011-2013)",
+      "XY (2014-2016)",
+      "Sun & Moon (2017-2019)",
+      "Sword & Shield (2020-2022)",
+      "Scarlet & Violet (2023+)",
+      "Autres"
+    ];
+    
+    return series.sort((a, b) => {
+      const indexA = seriesOrder.indexOf(a.name);
+      const indexB = seriesOrder.indexOf(b.name);
+      return indexA - indexB;
+    });
+  };
+
   const loadPokemonExpansions = async () => {
     setIsLoading(true);
     setCurrentStep("Chargement des extensions Pokémon...");
@@ -70,8 +143,13 @@ const TCGPlaceholder = () => {
       // Pokémon game ID is 5 based on the API response
       const expansionsList = await cardtraderAPI.getExpansions(5);
       setExpansions(expansionsList);
-      setCurrentStep("Extensions Pokémon chargées !");
-      toast.success(`${expansionsList.length} extensions Pokémon trouvées !`);
+      
+      // Organiser par séries
+      const organizedSeries = organizePokemonSeries(expansionsList);
+      setPokemonSeries(organizedSeries);
+      
+      setCurrentStep("Extensions Pokémon organisées par séries !");
+      toast.success(`${expansionsList.length} extensions Pokémon trouvées et organisées par séries !`);
     } catch (error) {
       console.error("Erreur lors du chargement des extensions:", error);
       toast.error(error instanceof Error ? error.message : "Erreur lors du chargement des extensions");
@@ -232,33 +310,64 @@ const TCGPlaceholder = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="w-5 h-5" />
-              Extensions Pokémon TCG
+              Extensions Pokémon par Séries
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {expansions.length > 0 ? `${expansions.length} extensions Pokémon disponibles` : 'Chargement des extensions...'}
+              {pokemonSeries.length > 0 ? `${pokemonSeries.length} séries avec ${expansions.length} extensions au total` : 'Chargement des extensions...'}
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
-                Extension Pokémon
-              </label>
-              <Select 
-                value={selectedExpansion} 
-                onValueChange={setSelectedExpansion}
-                disabled={expansions.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez une extension Pokémon" />
-                </SelectTrigger>
-                <SelectContent className="max-h-96">
-                  {expansions.map((expansion) => (
-                    <SelectItem key={expansion.id} value={expansion.id.toString()}>
-                      {expansion.name} {expansion.total_cards && `(${expansion.total_cards} cartes)`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Série Pokémon
+                </label>
+                <Select 
+                  value={selectedSeries} 
+                  onValueChange={(value) => {
+                    setSelectedSeries(value);
+                    setSelectedExpansion("");
+                  }}
+                  disabled={pokemonSeries.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez une série Pokémon" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-96">
+                    {pokemonSeries.map((series) => (
+                      <SelectItem key={series.name} value={series.name}>
+                        {series.name} ({series.expansions.length} extensions)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedSeries && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Extension dans la série "{selectedSeries}"
+                  </label>
+                  <Select 
+                    value={selectedExpansion} 
+                    onValueChange={setSelectedExpansion}
+                    disabled={!selectedSeries}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez une extension" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-96">
+                      {pokemonSeries
+                        .find(series => series.name === selectedSeries)
+                        ?.expansions.map((expansion) => (
+                          <SelectItem key={expansion.id} value={expansion.id.toString()}>
+                            {expansion.name} {expansion.total_cards && `(${expansion.total_cards} cartes)`}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           
           <div className="flex flex-col sm:flex-row gap-4">
@@ -294,8 +403,10 @@ const TCGPlaceholder = () => {
                   setIsApiKeySet(false);
                   localStorage.removeItem('cardtrader-api-key');
                   setExpansions([]);
+                  setPokemonSeries([]);
                   setTcgCards([]);
                   setSelectedExpansion("");
+                  setSelectedSeries("");
                 }}
                 variant="outline"
                 size="sm"
