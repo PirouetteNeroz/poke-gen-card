@@ -8,52 +8,31 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Download, Loader2, FileText, Search, Sparkles, Key, AlertCircle } from "lucide-react";
 import { generateTCGPDF } from "@/services/tcgPdfGenerator";
-import { cardtraderAPI, type CardTraderGame, type CardTraderExpansion, type CardTraderBlueprint } from "@/services/cardtraderApi";
+import { pokemonTCGAPI, type PokemonSet, type PokemonCard } from "@/services/pokemonTcgApi";
 
 interface PokemonSeries {
   name: string;
-  expansions: CardTraderExpansion[];
-}
-
-interface TCGSet {
-  id: string;
-  name: string;
-  series: string;
-  total: number;
-  releaseDate: string;
-}
-
-interface TCGCard {
-  id: string;
-  name: string;
-  number: string;
-  rarity: string;
-  set: {
-    name: string;
-    series: string;
-  };
+  sets: PokemonSet[];
 }
 
 const TCGPlaceholder = () => {
   const [apiKey, setApiKey] = useState<string>("");
-  const [isApiKeySet, setIsApiKeySet] = useState(false);
-  const [selectedExpansion, setSelectedExpansion] = useState<string>("");
+  const [selectedSet, setSelectedSet] = useState<string>("");
   const [selectedSeries, setSelectedSeries] = useState<string>("");
-  const [expansions, setExpansions] = useState<CardTraderExpansion[]>([]);
+  const [sets, setSets] = useState<PokemonSet[]>([]);
   const [pokemonSeries, setPokemonSeries] = useState<PokemonSeries[]>([]);
-  const [tcgCards, setTcgCards] = useState<TCGCard[]>([]);
+  const [tcgCards, setTcgCards] = useState<PokemonCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>("");
 
   useEffect(() => {
-    const savedApiKey = localStorage.getItem('cardtrader-api-key');
+    const savedApiKey = localStorage.getItem('pokemon-tcg-api-key');
     if (savedApiKey) {
       setApiKey(savedApiKey);
-      setIsApiKeySet(true);
-      cardtraderAPI.setApiKey(savedApiKey);
-      loadPokemonExpansions();
+      pokemonTCGAPI.setApiKey(savedApiKey);
     }
+    loadPokemonSets();
   }, []);
 
   const handleApiKeySubmit = () => {
@@ -62,102 +41,54 @@ const TCGPlaceholder = () => {
       return;
     }
     
-    localStorage.setItem('cardtrader-api-key', apiKey);
-    cardtraderAPI.setApiKey(apiKey);
-    setIsApiKeySet(true);
-    loadPokemonExpansions();
+    localStorage.setItem('pokemon-tcg-api-key', apiKey);
+    pokemonTCGAPI.setApiKey(apiKey);
     toast.success("Clé API configurée avec succès !");
   };
 
-  const organizePokemonSeries = (expansions: CardTraderExpansion[]) => {
-    const seriesMap = new Map<string, CardTraderExpansion[]>();
+  const organizePokemonSeries = (sets: PokemonSet[]) => {
+    const seriesMap = new Map<string, PokemonSet[]>();
     
-    expansions.forEach(expansion => {
-      let seriesName = "Autres";
-      
-      // Détection des séries principales basée sur le nom
-      if (expansion.name.includes("Base Set") || expansion.name.includes("Jungle") || expansion.name.includes("Fossil")) {
-        seriesName = "Classique (1998-2000)";
-      } else if (expansion.name.includes("Neo ")) {
-        seriesName = "Neo (2000-2001)";
-      } else if (expansion.name.includes("e-Card") || expansion.name.includes("Expedition") || expansion.name.includes("Aquapolis") || expansion.name.includes("Skyridge")) {
-        seriesName = "e-Card (2002-2003)";
-      } else if (expansion.name.includes("EX") && !expansion.name.includes("TAG TEAM")) {
-        seriesName = "EX (2003-2007)";
-      } else if (expansion.name.includes("Diamond") || expansion.name.includes("Pearl") || expansion.name.includes("Platinum")) {
-        seriesName = "Diamond & Pearl (2007-2009)";
-      } else if (expansion.name.includes("HeartGold") || expansion.name.includes("SoulSilver") || expansion.name.includes("HGSS")) {
-        seriesName = "HeartGold & SoulSilver (2010-2011)";
-      } else if (expansion.name.includes("Black") || expansion.name.includes("White") || expansion.name.includes("BW")) {
-        seriesName = "Black & White (2011-2013)";
-      } else if (expansion.name.includes("XY") || expansion.name.includes("Kalos")) {
-        seriesName = "XY (2014-2016)";
-      } else if (expansion.name.includes("Sun") || expansion.name.includes("Moon") || expansion.name.includes("SM") || expansion.name.includes("Alola")) {
-        seriesName = "Sun & Moon (2017-2019)";
-      } else if (expansion.name.includes("Sword") || expansion.name.includes("Shield") || expansion.name.includes("SWSH") || expansion.name.includes("Galar")) {
-        seriesName = "Sword & Shield (2020-2022)";
-      } else if (expansion.name.includes("Scarlet") || expansion.name.includes("Violet") || expansion.name.includes("SV") || expansion.name.includes("Paldea") || expansion.name.includes("151")) {
-        seriesName = "Scarlet & Violet (2023+)";
-      }
+    sets.forEach(set => {
+      const seriesName = set.series;
       
       if (!seriesMap.has(seriesName)) {
         seriesMap.set(seriesName, []);
       }
-      seriesMap.get(seriesName)!.push(expansion);
+      seriesMap.get(seriesName)!.push(set);
     });
     
-    // Convertir en tableau et trier
-    const series = Array.from(seriesMap.entries()).map(([name, expansions]) => ({
+    // Convertir en tableau et trier par date de sortie
+    const series = Array.from(seriesMap.entries()).map(([name, sets]) => ({
       name,
-      expansions: expansions.sort((a, b) => a.name.localeCompare(b.name))
+      sets: sets.sort((a, b) => new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime())
     }));
     
-    // Trier les séries par ordre chronologique
-    const seriesOrder = [
-      "Classique (1998-2000)",
-      "Neo (2000-2001)", 
-      "e-Card (2002-2003)",
-      "EX (2003-2007)",
-      "Diamond & Pearl (2007-2009)",
-      "HeartGold & SoulSilver (2010-2011)",
-      "Black & White (2011-2013)",
-      "XY (2014-2016)",
-      "Sun & Moon (2017-2019)",
-      "Sword & Shield (2020-2022)",
-      "Scarlet & Violet (2023+)",
-      "Autres"
-    ];
-    
+    // Trier les séries par la date de sortie du premier set
     return series.sort((a, b) => {
-      const indexA = seriesOrder.indexOf(a.name);
-      const indexB = seriesOrder.indexOf(b.name);
-      return indexA - indexB;
+      const dateA = new Date(a.sets[0]?.releaseDate || '1999-01-01').getTime();
+      const dateB = new Date(b.sets[0]?.releaseDate || '1999-01-01').getTime();
+      return dateA - dateB;
     });
   };
 
-  const loadPokemonExpansions = async () => {
+  const loadPokemonSets = async () => {
     setIsLoading(true);
-    setCurrentStep("Chargement des extensions Pokémon...");
+    setCurrentStep("Chargement des sets Pokémon...");
     
     try {
-      // Pokémon game ID is 5 based on the API response
-      const expansionsList = await cardtraderAPI.getExpansions(5);
-      setExpansions(expansionsList);
+      const setsList = await pokemonTCGAPI.getSets();
+      setSets(setsList);
       
       // Organiser par séries
-      const organizedSeries = organizePokemonSeries(expansionsList);
+      const organizedSeries = organizePokemonSeries(setsList);
       setPokemonSeries(organizedSeries);
       
-      setCurrentStep("Extensions Pokémon organisées par séries !");
-      toast.success(`${expansionsList.length} extensions Pokémon trouvées et organisées par séries !`);
+      setCurrentStep("Sets Pokémon organisés par séries !");
+      toast.success(`${setsList.length} sets Pokémon trouvés et organisés par séries !`);
     } catch (error) {
-      console.error("Erreur lors du chargement des extensions:", error);
-      toast.error(error instanceof Error ? error.message : "Erreur lors du chargement des extensions");
-      // Reset API key on error
-      if (error instanceof Error && error.message.includes('Clé API')) {
-        setIsApiKeySet(false);
-        localStorage.removeItem('cardtrader-api-key');
-      }
+      console.error("Erreur lors du chargement des sets:", error);
+      toast.error(error instanceof Error ? error.message : "Erreur lors du chargement des sets");
     } finally {
       setIsLoading(false);
       setCurrentStep("");
@@ -166,8 +97,8 @@ const TCGPlaceholder = () => {
 
 
   const handleLoadCards = async () => {
-    if (!selectedExpansion) {
-      toast.error("Veuillez sélectionner une extension");
+    if (!selectedSet) {
+      toast.error("Veuillez sélectionner un set");
       return;
     }
 
@@ -176,31 +107,17 @@ const TCGPlaceholder = () => {
     setCurrentStep("Chargement des cartes...");
 
     try {
-      const selectedExpansionData = expansions.find(exp => exp.id.toString() === selectedExpansion);
-      if (!selectedExpansionData) return;
+      const selectedSetData = sets.find(set => set.id === selectedSet);
+      if (!selectedSetData) return;
 
-      console.log("Chargement des cartes pour:", selectedExpansionData);
+      console.log("Chargement des cartes pour:", selectedSetData);
 
-      const blueprints = await cardtraderAPI.getBlueprints(selectedExpansionData.id);
+      const cards = await pokemonTCGAPI.getCards(selectedSetData.id);
       
-      const cards: TCGCard[] = blueprints.map((blueprint, index) => {
-        setProgress(((index + 1) / blueprints.length) * 100);
-        
-        return {
-          id: blueprint.id.toString(),
-          name: blueprint.name,
-          number: blueprint.collector_number || (index + 1).toString().padStart(3, '0'),
-          rarity: blueprint.rarity || 'Unknown',
-          set: {
-            name: selectedExpansionData.name,
-            series: 'Pokémon'
-          }
-        };
-      });
-
+      // Mise à jour du progrès
+      setProgress(100);
       setTcgCards(cards);
       setCurrentStep("Cartes chargées !");
-      setProgress(100);
       
       toast.success(`${cards.length} cartes chargées avec succès !`);
     } catch (error) {
@@ -219,17 +136,29 @@ const TCGPlaceholder = () => {
       return;
     }
 
-    const selectedExpansionData = expansions.find(exp => exp.id.toString() === selectedExpansion);
-    if (!selectedExpansionData) return;
+    const selectedSetData = sets.find(set => set.id === selectedSet);
+    if (!selectedSetData) return;
 
     setIsLoading(true);
     setProgress(0);
     setCurrentStep("Génération du PDF TCG...");
 
     try {
+      // Convertir les cartes au format attendu par le générateur PDF
+      const cardsForPDF = tcgCards.map(card => ({
+        id: card.id,
+        name: card.name,
+        number: card.number,
+        rarity: card.rarity,
+        set: {
+          name: card.set.name,
+          series: card.set.series
+        }
+      }));
+
       await generateTCGPDF(
-        tcgCards,
-        selectedExpansionData.name,
+        cardsForPDF,
+        selectedSetData.name,
         (pdfProgress) => {
           setProgress(pdfProgress);
         }
@@ -249,131 +178,127 @@ const TCGPlaceholder = () => {
 
   return (
     <div className="space-y-6">
-      {/* Configuration de l'API */}
-      {!isApiKeySet && (
-        <Card className="shadow-card border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
-              <Key className="w-5 h-5" />
-              Configuration API CardTrader
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-                  Clé API CardTrader requise
-                </p>
-                <p className="text-blue-700 dark:text-blue-300">
-                  Pour utiliser cette fonctionnalité, vous devez créer un compte sur{" "}
-                  <a href="https://www.cardtrader.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">
-                    CardTrader.com
-                  </a>{" "}
-                  et obtenir votre clé API dans les paramètres de votre compte.
-                </p>
-              </div>
+      {/* Configuration de l'API (optionnelle) */}
+      <Card className="shadow-card border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+            <Key className="w-5 h-5" />
+            Configuration API Pokémon TCG (Optionnelle)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
+            <AlertCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-green-900 dark:text-green-100 mb-1">
+                API gratuite - Clé optionnelle
+              </p>
+              <p className="text-green-700 dark:text-green-300">
+                L'API Pokémon TCG fonctionne sans clé API. Pour plus de requêtes par minute, vous pouvez obtenir une clé gratuite sur{" "}
+                <a href="https://dev.pokemontcg.io" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                  dev.pokemontcg.io
+                </a>
+              </p>
             </div>
-            
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">
+              Clé API Pokémon TCG (optionnelle)
+            </label>
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                placeholder="Clé API optionnelle..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="flex-1"
+              />
+              <Button 
+                onClick={handleApiKeySubmit}
+                disabled={isLoading}
+                variant="outline"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Configurer"
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Navigation des Sets TCG */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="w-5 h-5" />
+            Sets Pokémon par Séries
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {pokemonSeries.length > 0 ? `${pokemonSeries.length} séries avec ${sets.length} sets au total` : 'Chargement des sets...'}
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">
-                Clé API CardTrader
+                Série Pokémon
               </label>
-              <div className="flex gap-2">
-                <Input
-                  type="password"
-                  placeholder="Saisissez votre clé API CardTrader..."
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="flex-1"
-                />
-                <Button 
-                  onClick={handleApiKeySubmit}
-                  disabled={!apiKey.trim() || isLoading}
-                  variant="outline"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    "Configurer"
-                  )}
-                </Button>
-              </div>
+              <Select 
+                value={selectedSeries} 
+                onValueChange={(value) => {
+                  setSelectedSeries(value);
+                  setSelectedSet("");
+                }}
+                disabled={pokemonSeries.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez une série Pokémon" />
+                </SelectTrigger>
+                <SelectContent className="max-h-96">
+                  {pokemonSeries.map((series) => (
+                    <SelectItem key={series.name} value={series.name}>
+                      {series.name} ({series.sets.length} sets)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Configuration TCG */}
-      {isApiKeySet && (
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="w-5 h-5" />
-              Extensions Pokémon par Séries
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {pokemonSeries.length > 0 ? `${pokemonSeries.length} séries avec ${expansions.length} extensions au total` : 'Chargement des extensions...'}
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-4">
+            {selectedSeries && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Série Pokémon
+                  Set dans la série "{selectedSeries}"
                 </label>
                 <Select 
-                  value={selectedSeries} 
-                  onValueChange={(value) => {
-                    setSelectedSeries(value);
-                    setSelectedExpansion("");
-                  }}
-                  disabled={pokemonSeries.length === 0}
+                  value={selectedSet} 
+                  onValueChange={setSelectedSet}
+                  disabled={!selectedSeries}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez une série Pokémon" />
+                    <SelectValue placeholder="Sélectionnez un set" />
                   </SelectTrigger>
                   <SelectContent className="max-h-96">
-                    {pokemonSeries.map((series) => (
-                      <SelectItem key={series.name} value={series.name}>
-                        {series.name} ({series.expansions.length} extensions)
-                      </SelectItem>
-                    ))}
+                    {pokemonSeries
+                      .find(series => series.name === selectedSeries)
+                      ?.sets.map((set) => (
+                        <SelectItem key={set.id} value={set.id}>
+                          {set.name} ({set.total} cartes) - {new Date(set.releaseDate).getFullYear()}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              {selectedSeries && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">
-                    Extension dans la série "{selectedSeries}"
-                  </label>
-                  <Select 
-                    value={selectedExpansion} 
-                    onValueChange={setSelectedExpansion}
-                    disabled={!selectedSeries}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez une extension" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-96">
-                      {pokemonSeries
-                        .find(series => series.name === selectedSeries)
-                        ?.expansions.map((expansion) => (
-                          <SelectItem key={expansion.id} value={expansion.id.toString()}>
-                            {expansion.name} {expansion.total_cards && `(${expansion.total_cards} cartes)`}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
+            )}
+          </div>
           
           <div className="flex flex-col sm:flex-row gap-4">
             <Button
               onClick={handleLoadCards}
-              disabled={isLoading || !selectedExpansion}
+              disabled={isLoading || !selectedSet}
               variant="outline"
               className="flex-1"
             >
@@ -397,25 +322,24 @@ const TCGPlaceholder = () => {
               Générer PDF TCG
             </Button>
             
-            {isApiKeySet && (
-              <Button
-                onClick={() => {
-                  setIsApiKeySet(false);
-                  localStorage.removeItem('cardtrader-api-key');
-                  setExpansions([]);
-                  setPokemonSeries([]);
-                  setTcgCards([]);
-                  setSelectedExpansion("");
-                  setSelectedSeries("");
-                }}
-                variant="outline"
-                size="sm"
-                className="text-muted-foreground"
-              >
-                <Key className="w-4 h-4 mr-2" />
-                Changer clé API
-              </Button>
-            )}
+            <Button
+              onClick={() => {
+                localStorage.removeItem('pokemon-tcg-api-key');
+                setSets([]);
+                setPokemonSeries([]);
+                setTcgCards([]);
+                setSelectedSet("");
+                setSelectedSeries("");
+                setApiKey("");
+                loadPokemonSets();
+              }}
+              variant="outline"
+              size="sm"
+              className="text-muted-foreground"
+            >
+              <Key className="w-4 h-4 mr-2" />
+              Recharger
+            </Button>
           </div>
 
           {/* Progression */}
@@ -430,7 +354,6 @@ const TCGPlaceholder = () => {
           )}
           </CardContent>
         </Card>
-      )}
 
       {/* Aperçu des cartes */}
       {tcgCards.length > 0 && (
@@ -441,7 +364,7 @@ const TCGPlaceholder = () => {
               Aperçu des cartes Pokémon
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {tcgCards.length} cartes trouvées dans {expansions.find(e => e.id.toString() === selectedExpansion)?.name}
+              {tcgCards.length} cartes trouvées dans {sets.find(s => s.id === selectedSet)?.name}
             </p>
           </CardHeader>
           <CardContent>
@@ -473,9 +396,9 @@ const TCGPlaceholder = () => {
             <div className="w-12 h-12 bg-pokemon-red rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-6 h-6 text-white" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">API CardTrader</h3>
+            <h3 className="font-semibold text-lg mb-2">API Pokémon TCG</h3>
             <p className="text-muted-foreground text-sm">
-              Données officielles Pokémon TCG
+              Données officielles gratuites
             </p>
           </CardContent>
         </Card>
