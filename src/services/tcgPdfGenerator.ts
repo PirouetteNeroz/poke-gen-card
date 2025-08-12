@@ -169,7 +169,7 @@ export const generateTCGPDF = async (
     const row = Math.floor(cardCount / cardsPerRow);
     const col = cardCount % cardsPerRow;
     
-    // Try to get Pokemon sprite
+    // Try to get Pokemon sprite, fallback to TCG card image
     let pokemonSprite = null;
     try {
       const spriteUrl = await getPokemonSprite(card.name);
@@ -178,6 +178,15 @@ export const generateTCGPDF = async (
       }
     } catch (error) {
       console.log(`Could not load sprite for ${card.name}`);
+    }
+    
+    // If no Pokemon sprite and TCG card has image, use that instead
+    if (!pokemonSprite && card.images?.small) {
+      try {
+        pokemonSprite = await getImageAsBase64(card.images.small);
+      } catch (error) {
+        console.log(`Could not load TCG card image for ${card.name}`);
+      }
     }
     
     if (cardCount === 0) {
