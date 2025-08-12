@@ -117,49 +117,59 @@ export const generateTCGPDF = async (
   let currentPage = 0;
   let cardCount = 0;
   
-  // Page de titre sobre pour impression comme le Pokédex
+  // Page de titre élégante pour TCG
   const addTitlePage = () => {
-    // Fond blanc (pas de couleur ajoutée, fond par défaut)
+    // Fond dégradé TCG (violet vers doré)
+    const gradientSteps = 50;
+    for (let i = 0; i < gradientSteps; i++) {
+      const ratio = i / gradientSteps;
+      const r = Math.round(79 + (217 - 79) * ratio);
+      const g = Math.round(70 + (119 - 70) * ratio);
+      const b = Math.round(229 + (35 - 229) * ratio);
+      
+      pdf.setFillColor(r, g, b);
+      pdf.rect(0, (pageHeight / gradientSteps) * i, pageWidth, pageHeight / gradientSteps + 1, 'F');
+    }
     
-    // Titre principal en noir
+    // Titre principal TCG
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(28);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text('Collection TCG', pageWidth / 2, pageHeight / 2 - 30, { align: 'center' });
+    pdf.setFontSize(22);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('Collection TCG', pageWidth / 2, pageHeight / 2 - 25, { align: 'center' });
     
-    // Nom de l'extension en noir
+    // Nom de l'extension
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
-    pdf.setTextColor(0, 0, 0);
+    pdf.setTextColor(255, 215, 0);
     pdf.text(setName, pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
     
-    // Sous-titre en gris foncé
+    // Sous-titre
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(16);
-    pdf.setTextColor(60, 60, 60);
-    pdf.text('Cartes de collection à découper', pageWidth / 2, pageHeight / 2 + 10, { align: 'center' });
-    
-    // Statistiques en gris
     pdf.setFontSize(12);
-    pdf.setTextColor(100, 100, 100);
-    pdf.text(`${cardsList.length} cartes incluses`, pageWidth / 2, pageHeight / 2 + 25, { align: 'center' });
+    pdf.setTextColor(230, 230, 255);
+    pdf.text('Cartes de collection à découper', pageWidth / 2, pageHeight / 2 + 5, { align: 'center' });
     
-    // Ligne décorative simple en noir
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(1);
-    const decorLength = 50;
-    pdf.line(pageWidth / 2 - decorLength, pageHeight / 2 + 40, pageWidth / 2 + decorLength, pageHeight / 2 + 40);
-    
-    // Bordure de page simple
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(2);
-    pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
-    
-    // Date de génération
+    // Statistiques
     pdf.setFontSize(10);
-    pdf.setTextColor(120, 120, 120);
-    const currentDate = new Date().toLocaleDateString('fr-FR');
-    pdf.text(`Généré le ${currentDate}`, pageWidth / 2, pageHeight - 25, { align: 'center' });
+    pdf.setTextColor(200, 200, 255);
+    pdf.text(`${cardsList.length} cartes incluses`, pageWidth / 2, pageHeight / 2 + 20, { align: 'center' });
+    
+    // Éléments décoratifs TCG
+    pdf.setDrawColor(255, 215, 0);
+    pdf.setLineWidth(3);
+    const decorLength = 50;
+    pdf.line(pageWidth / 2 - decorLength, pageHeight / 2 + 35, pageWidth / 2 + decorLength, pageHeight / 2 + 35);
+    
+    // Losanges décoratifs
+    pdf.setFillColor(255, 215, 0);
+    for (let i = 0; i < 3; i++) {
+      const x = pageWidth / 2 - 15 + i * 15;
+      const y = pageHeight / 2 + 45;
+      // Dessiner un losange
+      pdf.setFillColor(255, 215, 0);
+      const size = 2;
+      pdf.lines([[size, 0], [0, size], [-size, 0], [0, -size]], x, y, [1, 1], 'F');
+    }
   };
   
   addTitlePage();
@@ -188,10 +198,10 @@ export const generateTCGPDF = async (
     const x = marginX + col * cardWidth;
     const y = marginY + row * cardHeight;
     
-    // Lignes de découpe comme le Pokédex
-    pdf.setDrawColor(99, 102, 241);
-    pdf.setLineWidth(0.3);
-    pdf.setLineDashPattern([2, 2], 0);
+    // Lignes de découpe élégantes TCG
+    pdf.setDrawColor(147, 51, 234);
+    pdf.setLineWidth(0.4);
+    pdf.setLineDashPattern([3, 1], 0);
     
     if (col > 0) {
       pdf.line(x, y, x, y + cardHeight);
@@ -209,30 +219,43 @@ export const generateTCGPDF = async (
     const contentWidth = cardWidth - (cardPadding * 2);
     const contentHeight = cardHeight - (cardPadding * 2);
     
-    // Background blanc comme le Pokédex
-    pdf.setFillColor(250, 252, 255);
-    pdf.rect(contentX, contentY, contentWidth, contentHeight, 'F');
+    // Background avec dégradé subtil TCG
+    const bgSteps = 10;
+    for (let i = 0; i < bgSteps; i++) {
+      const ratio = i / bgSteps;
+      const r = Math.round(255 - (255 - 248) * ratio);
+      const g = Math.round(255 - (255 - 250) * ratio);
+      const b = Math.round(255 - (255 - 255) * ratio);
+      
+      pdf.setFillColor(r, g, b);
+      pdf.rect(contentX, contentY + (contentHeight / bgSteps) * i, contentWidth, contentHeight / bgSteps + 0.5, 'F');
+    }
     
-    // Bordure de carte noire continue comme le Pokédex
-    pdf.setDrawColor(0, 0, 0);
+    // Bordure principale avec style TCG
+    pdf.setDrawColor(147, 51, 234);
     pdf.setLineWidth(1.5);
-    pdf.rect(contentX, contentY, contentWidth, contentHeight);
+    pdf.roundedRect(contentX, contentY, contentWidth, contentHeight, 1.5, 1.5);
     
-    // Badge numéro de carte comme le Pokédex
-    const numberBadgeWidth = 18;
+    // Bordure intérieure dorée
+    pdf.setDrawColor(255, 215, 0);
+    pdf.setLineWidth(0.8);
+    pdf.roundedRect(contentX + 1, contentY + 1, contentWidth - 2, contentHeight - 2, 1, 1);
+    
+    // Badge numéro de carte élégant
+    const numberBadgeWidth = 16;
     const numberBadgeHeight = 8;
-    pdf.setFillColor(0, 0, 0);
-    pdf.roundedRect(contentX + 2, contentY + 3, numberBadgeWidth, numberBadgeHeight, 2, 2, 'F');
+    pdf.setFillColor(147, 51, 234);
+    pdf.roundedRect(contentX + contentWidth - numberBadgeWidth - 2, contentY + 3, numberBadgeWidth, numberBadgeHeight, 2, 2, 'F');
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(7);
     pdf.setTextColor(255, 255, 255);
-    pdf.text(`#${card.number}`, contentX + 2 + numberBadgeWidth / 2, contentY + 8.5, { align: 'center' });
+    pdf.text(card.number, contentX + contentWidth - numberBadgeWidth / 2 - 2, contentY + 8.5, { align: 'center' });
     
-    // Nom de la carte en noir comme le Pokédex
+    // Nom de la carte avec style TCG
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(10);
+    pdf.setTextColor(75, 85, 99);
     const maxNameWidth = contentWidth - 4;
     let displayName = card.name;
     
@@ -242,24 +265,37 @@ export const generateTCGPDF = async (
     }
     if (displayName !== card.name) displayName += '...';
     
-    const nameY = contentY + 20;
-    pdf.text(displayName, contentX + contentWidth / 2, nameY, { align: 'center' });
+    pdf.text(displayName, contentX + contentWidth / 2, contentY + 18, { align: 'center' });
     
-    // Ligne décorative sous le nom en noir
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(0.8);
-    const lineWidth = Math.min(displayName.length * 4, contentWidth * 0.7);
+    // Ligne décorative sous le nom
+    pdf.setDrawColor(255, 215, 0);
+    pdf.setLineWidth(1);
+    const nameLineWidth = Math.min(pdf.getTextWidth(displayName), contentWidth * 0.8);
     pdf.line(
-      contentX + (contentWidth - lineWidth) / 2, 
-      nameY + 2, 
-      contentX + (contentWidth + lineWidth) / 2, 
-      nameY + 2
+      contentX + (contentWidth - nameLineWidth) / 2, 
+      contentY + 21, 
+      contentX + (contentWidth + nameLineWidth) / 2, 
+      contentY + 21
     );
     
-    // Zone image sans cadre comme le Pokédex
-    const imageSize = Math.min(contentWidth * 0.7, contentHeight * 0.45);
+    // Zone image avec cadre TCG élégant
+    const imageSize = Math.min(contentWidth * 0.75, contentHeight * 0.55);
     const imageX = contentX + (contentWidth / 2) - (imageSize / 2);
-    const imageY = nameY + 8;
+    const imageY = contentY + 26;
+    
+    // Cadre décoratif TCG
+    const frameSize = imageSize + 3;
+    const frameX = imageX - 1.5;
+    const frameY = imageY - 1.5;
+    
+    // Fond du cadre avec effet brillant
+    pdf.setFillColor(245, 245, 250);
+    pdf.roundedRect(frameX, frameY, frameSize, frameSize, 2, 2, 'F');
+    
+    // Bordure du cadre avec couleurs TCG
+    pdf.setDrawColor(147, 51, 234);
+    pdf.setLineWidth(1);
+    pdf.roundedRect(frameX, frameY, frameSize, frameSize, 2, 2);
     
     if (pokemonSprite) {
       // Afficher l'image Pokémon réelle
@@ -267,54 +303,86 @@ export const generateTCGPDF = async (
         pdf.addImage(pokemonSprite, 'PNG', imageX, imageY, imageSize, imageSize);
       } catch (error) {
         console.log(`Could not add image for ${card.name}`);
-        // Placeholder simple comme le Pokédex
+        // Fallback to placeholder
         pdf.setFillColor(248, 250, 252);
-        pdf.rect(imageX, imageY, imageSize, imageSize, 'F');
-        pdf.setDrawColor(0, 0, 0);
-        pdf.setLineWidth(1);
-        pdf.rect(imageX, imageY, imageSize, imageSize);
+        pdf.roundedRect(imageX, imageY, imageSize, imageSize, 1.5, 1.5, 'F');
         
-        // Icône pokéball stylisée
-        pdf.setFillColor(220, 38, 38);
-        pdf.circle(imageX + imageSize / 2, imageY + imageSize / 2, imageSize / 8, 'F');
+        // Motif décoratif Pokémon style Pokédex
+        const centerX = imageX + imageSize / 2;
+        const centerY = imageY + imageSize / 2;
+        
+        // Badge Pokémon style
+        pdf.setFillColor(220, 38, 127);
+        pdf.circle(centerX, centerY, imageSize / 6, 'F');
+        
+        // Pokéball icon simple
         pdf.setFillColor(255, 255, 255);
-        pdf.circle(imageX + imageSize / 2, imageY + imageSize / 2, imageSize / 12, 'F');
+        pdf.circle(centerX, centerY, imageSize / 12, 'F');
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(6);
+        pdf.setTextColor(75, 85, 99);
+        pdf.text('?', centerX, centerY + 1, { align: 'center' });
       }
     } else {
-      // Placeholder simple comme le Pokédex
+      // Placeholder élégant style Pokédex
       pdf.setFillColor(248, 250, 252);
-      pdf.rect(imageX, imageY, imageSize, imageSize, 'F');
-      pdf.setDrawColor(0, 0, 0);
-      pdf.setLineWidth(1);
-      pdf.rect(imageX, imageY, imageSize, imageSize);
+      pdf.roundedRect(imageX, imageY, imageSize, imageSize, 1.5, 1.5, 'F');
       
-      // Icône pokéball stylisée
-      pdf.setFillColor(220, 38, 38);
-      pdf.circle(imageX + imageSize / 2, imageY + imageSize / 2, imageSize / 8, 'F');
+      // Motif décoratif Pokémon style Pokédex
+      const centerX = imageX + imageSize / 2;
+      const centerY = imageY + imageSize / 2;
+      
+      // Badge Pokémon style
+      pdf.setFillColor(220, 38, 127);
+      pdf.circle(centerX, centerY, imageSize / 6, 'F');
+      
+      // Pokéball icon simple
       pdf.setFillColor(255, 255, 255);
-      pdf.circle(imageX + imageSize / 2, imageY + imageSize / 2, imageSize / 12, 'F');
+      pdf.circle(centerX, centerY, imageSize / 12, 'F');
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(6);
+      pdf.setTextColor(75, 85, 99);
+      pdf.text('?', centerX, centerY + 1, { align: 'center' });
     }
     
-    // Numéro de carte du set comme le Pokédex avec badge noir
-    const cardNumber = `${card.number}/${cardsList.length}`;
-    const numberY = imageY + imageSize + 8;
+    // Badge rareté stylisé
+    const rarityY = imageY + frameSize + 8;
     
-    // Badge pour le numéro comme le Pokédex
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    const numberWidth = pdf.getTextWidth(cardNumber) + 6;
+    // Couleur selon la rareté
+    let rarityColor = [75, 85, 99]; // Gris par défaut
+    if (card.rarity.toLowerCase().includes('rare')) {
+      rarityColor = [147, 51, 234]; // Violet pour rare
+    } else if (card.rarity.toLowerCase().includes('uncommon')) {
+      rarityColor = [59, 130, 246]; // Bleu pour uncommon
+    } else if (card.rarity.toLowerCase().includes('common')) {
+      rarityColor = [34, 197, 94]; // Vert pour common
+    }
     
-    pdf.setFillColor(0, 0, 0);
+    // Badge de rareté
+    const rarityWidth = Math.max(pdf.getTextWidth(card.rarity) + 6, contentWidth * 0.6);
+    pdf.setFillColor(rarityColor[0], rarityColor[1], rarityColor[2]);
     pdf.roundedRect(
-      contentX + (contentWidth - numberWidth) / 2, 
-      numberY - 4, 
-      numberWidth, 
-      8, 
+      contentX + (contentWidth - rarityWidth) / 2, 
+      rarityY - 3, 
+      rarityWidth, 
+      7, 
       2, 2, 'F'
     );
     
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7);
     pdf.setTextColor(255, 255, 255);
-    pdf.text(cardNumber, contentX + contentWidth / 2, numberY + 1, { align: 'center' });
+    pdf.text(card.rarity.toUpperCase(), contentX + contentWidth / 2, rarityY + 1.5, { align: 'center' });
+    
+    // Extension en petit en bas
+    if (card.set && card.set.series) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(6);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(card.set.series, contentX + contentWidth / 2, rarityY + 10, { align: 'center' });
+    }
     
     cardCount++;
     
