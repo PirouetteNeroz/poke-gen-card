@@ -26,6 +26,16 @@ const TCGPlaceholder = () => {
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>("");
 
+  // Cache pour les sets et cartes
+  const CACHE_KEYS = {
+    SETS: 'pokemon-tcg-sets-cache',
+    CARDS: 'pokemon-tcg-cards-cache',
+    SETS_TIMESTAMP: 'pokemon-tcg-sets-timestamp',
+    CARDS_TIMESTAMP: 'pokemon-tcg-cards-timestamp'
+  };
+
+  const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 heures
+
   useEffect(() => {
     const savedApiKey = localStorage.getItem('pokemon-tcg-api-key');
     if (savedApiKey) {
@@ -72,12 +82,38 @@ const TCGPlaceholder = () => {
     });
   };
 
+  const isCacheValid = (timestampKey: string) => {
+    const timestamp = localStorage.getItem(timestampKey);
+    if (!timestamp) return false;
+    return Date.now() - parseInt(timestamp) < CACHE_DURATION;
+  };
+
   const loadPokemonSets = async () => {
     setIsLoading(true);
     setCurrentStep("Chargement des sets Pokémon...");
     
     try {
-      const setsList = await pokemonTCGAPI.getSets();
+      let setsList: PokemonSet[];
+      
+      // Vérifier le cache
+      if (isCacheValid(CACHE_KEYS.SETS_TIMESTAMP)) {
+        const cachedSets = localStorage.getItem(CACHE_KEYS.SETS);
+        if (cachedSets) {
+          setsList = JSON.parse(cachedSets);
+          setCurrentStep("Sets chargés depuis le cache...");
+        } else {
+          throw new Error("Cache invalide");
+        }
+      } else {
+        // Charger depuis l'API avec retry
+        setCurrentStep("Chargement depuis l'API...");
+        setsList = await fetchWithRetry(() => pokemonTCGAPI.getSets(), 3);
+        
+        // Sauvegarder en cache
+        localStorage.setItem(CACHE_KEYS.SETS, JSON.stringify(setsList));
+        localStorage.setItem(CACHE_KEYS.SETS_TIMESTAMP, Date.now().toString());
+      }
+      
       setSets(setsList);
       
       // Organiser par séries
@@ -88,11 +124,24 @@ const TCGPlaceholder = () => {
       toast.success(`${setsList.length} sets Pokémon trouvés et organisés par séries !`);
     } catch (error) {
       console.error("Erreur lors du chargement des sets:", error);
-      toast.error(error instanceof Error ? error.message : "Erreur lors du chargement des sets");
+      toast.error(error instanceof Error ? error.message : "Erreur de connexion. Vérifiez votre connexion internet.");
     } finally {
       setIsLoading(false);
       setCurrentStep("");
     }
+  };
+
+  const fetchWithRetry = async (fn: () => Promise<any>, retries: number): Promise<any> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fn();
+      } catch (error) {
+        if (i === retries - 1) throw error;
+        setCurrentStep(`Tentative ${i + 2}/${retries}...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Délai croissant
+      }
+    }
+    throw new Error("Max retries reached");
   };
 
 
@@ -112,7 +161,31 @@ const TCGPlaceholder = () => {
 
       console.log("Chargement des cartes pour:", selectedSetData);
 
-      const cards = await pokemonTCGAPI.getCards(selectedSetData.id);
+      let cards: PokemonCard[];
+      const cacheKey = `${CACHE_KEYS.CARDS}-${selectedSet}`;
+      const timestampKey = `${CACHE_KEYS.CARDS_TIMESTAMP}-${selectedSet}`;
+
+      // Vérifier le cache pour ce set spécifique
+      if (isCacheValid(timestampKey)) {
+        const cachedCards = localStorage.getItem(cacheKey);
+        if (cachedCards) {
+          cards = JSON.parse(cachedCards);
+          setCurrentStep("Cartes chargées depuis le cache...");
+          setProgress(50);
+        } else {
+          throw new Error("Cache invalide");
+        }
+      } else {
+        // Charger depuis l'API avec retry
+        setCurrentStep("Chargement des cartes depuis l'API...");
+        setProgress(25);
+        cards = await fetchWithRetry(() => pokemonTCGAPI.getCards(selectedSetData.id), 3);
+        
+        // Sauvegarder en cache
+        localStorage.setItem(cacheKey, JSON.stringify(cards));
+        localStorage.setItem(timestampKey, Date.now().toString());
+        setProgress(75);
+      }
       
       // Mise à jour du progrès
       setProgress(100);
@@ -122,7 +195,7 @@ const TCGPlaceholder = () => {
       toast.success(`${cards.length} cartes chargées avec succès !`);
     } catch (error) {
       console.error("Erreur lors du chargement des cartes:", error);
-      toast.error("Erreur lors du chargement des cartes");
+      toast.error("Erreur de connexion. Vérifiez votre connexion internet.");
     } finally {
       setIsLoading(false);
       setProgress(0);
@@ -324,6 +397,17 @@ const TCGPlaceholder = () => {
             
             <Button
               onClick={() => {
+                // Vider tout le cache
+                Object.values(CACHE_KEYS).forEach(key => {
+                  localStorage.removeItem(key);
+                  // Vider aussi les caches de cartes spécifiques
+                  if (key === CACHE_KEYS.CARDS) {
+                    sets.forEach(set => {
+                      localStorage.removeItem(`${key}-${set.id}`);
+                      localStorage.removeItem(`${CACHE_KEYS.CARDS_TIMESTAMP}-${set.id}`);
+                    });
+                  }
+                });
                 localStorage.removeItem('pokemon-tcg-api-key');
                 setSets([]);
                 setPokemonSeries([]);
@@ -332,13 +416,14 @@ const TCGPlaceholder = () => {
                 setSelectedSeries("");
                 setApiKey("");
                 loadPokemonSets();
+                toast.success("Cache vidé et données rechargées !");
               }}
               variant="outline"
               size="sm"
               className="text-muted-foreground"
             >
               <Key className="w-4 h-4 mr-2" />
-              Recharger
+              Vider Cache
             </Button>
           </div>
 
