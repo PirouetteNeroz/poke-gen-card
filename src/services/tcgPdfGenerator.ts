@@ -10,7 +10,89 @@ interface TCGCard {
     name: string;
     series: string;
   };
+  images?: {
+    small: string;
+    large: string;
+  };
 }
+
+// Helper function to get Pokemon sprite from Pokemon API
+const getPokemonSprite = async (cardName: string): Promise<string | null> => {
+  try {
+    // Extract Pokemon name from card name (remove suffixes like "EX", "V", etc.)
+    let pokemonName = cardName.toLowerCase()
+      .replace(/\s+(ex|v|vmax|gx|break|tag team).*$/i, '')
+      .replace(/[^a-z\s]/g, '')
+      .trim();
+    
+    // Special cases for Pokemon names
+    const nameMap: { [key: string]: string } = {
+      'nidoran♀': 'nidoran-f',
+      'nidoran♂': 'nidoran-m',
+      'farfetch\'d': 'farfetchd',
+      'mr. mime': 'mr-mime',
+      'ho-oh': 'ho-oh',
+      'deoxys': 'deoxys-normal',
+      'wormadam': 'wormadam-plant',
+      'rotom': 'rotom-normal',
+      'giratina': 'giratina-altered',
+      'shaymin': 'shaymin-land',
+      'arceus': 'arceus-normal',
+      'basculin': 'basculin-red-striped',
+      'darmanitan': 'darmanitan-standard',
+      'tornadus': 'tornadus-incarnate',
+      'thundurus': 'thundurus-incarnate',
+      'landorus': 'landorus-incarnate',
+      'keldeo': 'keldeo-ordinary',
+      'meloetta': 'meloetta-aria',
+      'flabebe': 'flabebe',
+      'pumpkaboo': 'pumpkaboo-average',
+      'gourgeist': 'gourgeist-average',
+      'oricorio': 'oricorio-baile',
+      'lycanroc': 'lycanroc-midday',
+      'wishiwashi': 'wishiwashi-solo',
+      'toxapex': 'toxapex',
+      'mimikyu': 'mimikyu-disguised',
+      'toxtricity': 'toxtricity-amped',
+      'eiscue': 'eiscue-ice',
+      'morpeko': 'morpeko-full-belly',
+      'urshifu': 'urshifu-single-strike',
+      'basculegion': 'basculegion-male'
+    };
+    
+    if (nameMap[pokemonName]) {
+      pokemonName = nameMap[pokemonName];
+    }
+    
+    const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonName}`);
+    if (response.ok) {
+      const pokemon = await response.json();
+      return pokemon.sprites?.other?.['official-artwork']?.front_default || 
+             pokemon.sprites?.front_default || null;
+    }
+  } catch (error) {
+    console.log(`Could not fetch sprite for ${cardName}`);
+  }
+  return null;
+};
+
+// Helper function to get image as base64
+const getImageAsBase64 = async (url: string): Promise<string> => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Error loading image:', error);
+    throw error;
+  }
+};
 
 export const generateTCGPDF = async (
   cardsList: TCGCard[],
@@ -96,6 +178,17 @@ export const generateTCGPDF = async (
     const card = cardsList[i];
     const row = Math.floor(cardCount / cardsPerRow);
     const col = cardCount % cardsPerRow;
+    
+    // Try to get Pokemon sprite
+    let pokemonSprite = null;
+    try {
+      const spriteUrl = await getPokemonSprite(card.name);
+      if (spriteUrl) {
+        pokemonSprite = await getImageAsBase64(spriteUrl);
+      }
+    } catch (error) {
+      console.log(`Could not load sprite for ${card.name}`);
+    }
     
     if (cardCount === 0) {
       pdf.addPage();
@@ -204,36 +297,55 @@ export const generateTCGPDF = async (
     pdf.setLineWidth(1);
     pdf.roundedRect(frameX, frameY, frameSize, frameSize, 2, 2);
     
-    // Placeholder élégant
-    pdf.setFillColor(248, 250, 252);
-    pdf.roundedRect(imageX, imageY, imageSize, imageSize, 1.5, 1.5, 'F');
-    
-    // Motif décoratif TCG au centre
-    const centerX = imageX + imageSize / 2;
-    const centerY = imageY + imageSize / 2;
-    
-    // Cercle central
-    pdf.setFillColor(147, 51, 234);
-    pdf.circle(centerX, centerY, imageSize / 8, 'F');
-    
-    // Texte TCG stylisé
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text('TCG', centerX, centerY + 1.5, { align: 'center' });
-    
-    // Étoiles décoratives autour
-    pdf.setFillColor(255, 215, 0);
-    const starPositions = [
-      [centerX - imageSize/4, centerY - imageSize/6],
-      [centerX + imageSize/4, centerY - imageSize/6],
-      [centerX - imageSize/4, centerY + imageSize/6],
-      [centerX + imageSize/4, centerY + imageSize/6]
-    ];
-    
-    starPositions.forEach(([x, y]) => {
-      pdf.circle(x, y, 1, 'F');
-    });
+    if (pokemonSprite) {
+      // Afficher l'image Pokémon réelle
+      try {
+        pdf.addImage(pokemonSprite, 'PNG', imageX, imageY, imageSize, imageSize);
+      } catch (error) {
+        console.log(`Could not add image for ${card.name}`);
+        // Fallback to placeholder
+        pdf.setFillColor(248, 250, 252);
+        pdf.roundedRect(imageX, imageY, imageSize, imageSize, 1.5, 1.5, 'F');
+        
+        // Motif décoratif Pokémon style Pokédex
+        const centerX = imageX + imageSize / 2;
+        const centerY = imageY + imageSize / 2;
+        
+        // Badge Pokémon style
+        pdf.setFillColor(220, 38, 127);
+        pdf.circle(centerX, centerY, imageSize / 6, 'F');
+        
+        // Pokéball icon simple
+        pdf.setFillColor(255, 255, 255);
+        pdf.circle(centerX, centerY, imageSize / 12, 'F');
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(6);
+        pdf.setTextColor(75, 85, 99);
+        pdf.text('?', centerX, centerY + 1, { align: 'center' });
+      }
+    } else {
+      // Placeholder élégant style Pokédex
+      pdf.setFillColor(248, 250, 252);
+      pdf.roundedRect(imageX, imageY, imageSize, imageSize, 1.5, 1.5, 'F');
+      
+      // Motif décoratif Pokémon style Pokédex
+      const centerX = imageX + imageSize / 2;
+      const centerY = imageY + imageSize / 2;
+      
+      // Badge Pokémon style
+      pdf.setFillColor(220, 38, 127);
+      pdf.circle(centerX, centerY, imageSize / 6, 'F');
+      
+      // Pokéball icon simple
+      pdf.setFillColor(255, 255, 255);
+      pdf.circle(centerX, centerY, imageSize / 12, 'F');
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(6);
+      pdf.setTextColor(75, 85, 99);
+      pdf.text('?', centerX, centerY + 1, { align: 'center' });
+    }
     
     // Badge rareté stylisé
     const rarityY = imageY + frameSize + 8;
