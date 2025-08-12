@@ -271,37 +271,37 @@ export const generateTCGPDF = async (
     const imageY = nameY + 8;
     
     if (pokemonSprite) {
-      // Afficher l'image Pokémon réelle
+      // Afficher l'image (Pokémon ou carte TCG)
       try {
         pdf.addImage(pokemonSprite, 'PNG', imageX, imageY, imageSize, imageSize);
       } catch (error) {
         console.log(`Could not add image for ${card.name}`);
-        // Placeholder simple comme le Pokédex
+        // Placeholder simple sans rond rouge
         pdf.setFillColor(248, 250, 252);
         pdf.rect(imageX, imageY, imageSize, imageSize, 'F');
         pdf.setDrawColor(0, 0, 0);
         pdf.setLineWidth(1);
         pdf.rect(imageX, imageY, imageSize, imageSize);
         
-        // Icône pokéball stylisée
-        pdf.setFillColor(220, 38, 38);
-        pdf.circle(imageX + imageSize / 2, imageY + imageSize / 2, imageSize / 8, 'F');
-        pdf.setFillColor(255, 255, 255);
-        pdf.circle(imageX + imageSize / 2, imageY + imageSize / 2, imageSize / 12, 'F');
+        // Texte "TCG" en placeholder
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.setTextColor(120, 120, 120);
+        pdf.text('TCG', imageX + imageSize / 2, imageY + imageSize / 2, { align: 'center' });
       }
     } else {
-      // Placeholder simple comme le Pokédex
+      // Placeholder simple sans rond rouge
       pdf.setFillColor(248, 250, 252);
       pdf.rect(imageX, imageY, imageSize, imageSize, 'F');
       pdf.setDrawColor(0, 0, 0);
       pdf.setLineWidth(1);
       pdf.rect(imageX, imageY, imageSize, imageSize);
       
-      // Icône pokéball stylisée
-      pdf.setFillColor(220, 38, 38);
-      pdf.circle(imageX + imageSize / 2, imageY + imageSize / 2, imageSize / 8, 'F');
-      pdf.setFillColor(255, 255, 255);
-      pdf.circle(imageX + imageSize / 2, imageY + imageSize / 2, imageSize / 12, 'F');
+      // Texte "TCG" en placeholder
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text('TCG', imageX + imageSize / 2, imageY + imageSize / 2, { align: 'center' });
     }
     
     // Numéro de carte du set comme le Pokédex avec badge noir
