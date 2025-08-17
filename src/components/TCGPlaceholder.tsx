@@ -205,7 +205,7 @@ const TCGPlaceholder = () => {
     }
   };
 
-  const handleGeneratePDF = async () => {
+  const handleGeneratePDF = async (pdfType: "sprites" | "complete" | "master") => {
     if (tcgCards.length === 0) {
       toast.error("Veuillez d'abord charger les cartes");
       return;
@@ -216,11 +216,18 @@ const TCGPlaceholder = () => {
 
     setIsLoading(true);
     setProgress(0);
-    setCurrentStep("Génération du PDF TCG...");
+    
+    const stepMessages = {
+      sprites: "Génération du PDF avec sprites Pokémon...",
+      complete: "Génération du PDF Complete Set (3x3)...", 
+      master: "Génération du PDF Master Set (avec reverses)..."
+    };
+    
+    setCurrentStep(stepMessages[pdfType]);
 
     try {
       // Convertir les cartes au format attendu par le générateur PDF
-      const cardsForPDF = tcgCards.map(card => ({
+      let cardsForPDF = tcgCards.map(card => ({
         id: card.id,
         name: card.name,
         number: card.number,
@@ -232,16 +239,37 @@ const TCGPlaceholder = () => {
         images: card.images
       }));
 
+      // Pour master set, ajouter les cartes reverse pour commune/uncommon/rare
+      if (pdfType === "master") {
+        const reverseCards = cardsForPDF
+          .filter(card => ["Common", "Uncommon", "Rare"].includes(card.rarity))
+          .map(card => ({
+            ...card,
+            id: card.id + "_reverse",
+            name: card.name + " (Reverse)",
+            isReverse: true
+          }));
+        cardsForPDF = [...cardsForPDF, ...reverseCards];
+      }
+
       await generateTCGPDF(
         cardsForPDF,
         selectedSetData.name,
+        pdfType,
         (pdfProgress) => {
           setProgress(pdfProgress);
         }
       );
 
       setCurrentStep("PDF généré !");
-      toast.success("PDF TCG généré avec succès !");
+      
+      const successMessages = {
+        sprites: "PDF avec sprites Pokémon généré avec succès !",
+        complete: "PDF Complete Set généré avec succès !",
+        master: "PDF Master Set généré avec succès !"
+      };
+      
+      toast.success(successMessages[pdfType]);
     } catch (error) {
       console.error("Erreur lors de la génération du PDF:", error);
       toast.error("Erreur lors de la génération du PDF");
@@ -410,18 +438,47 @@ const TCGPlaceholder = () => {
               )}
               Charger les cartes
             </Button>
-            <Button
-              onClick={handleGeneratePDF}
-              disabled={isLoading || tcgCards.length === 0}
-              className="flex-1 bg-gradient-pokemon hover:opacity-90"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4 mr-2" />
-              )}
-              Générer PDF TCG
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => handleGeneratePDF("sprites")}
+                disabled={isLoading || tcgCards.length === 0}
+                variant="outline"
+                className="w-full"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Option 1: PDF avec sprites Pokémon
+              </Button>
+              
+              <Button
+                onClick={() => handleGeneratePDF("complete")}
+                disabled={isLoading || tcgCards.length === 0}
+                className="w-full bg-gradient-pokemon hover:opacity-90"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Option 2: PDF Complete Set (cartes 3x3)
+              </Button>
+              
+              <Button
+                onClick={() => handleGeneratePDF("master")}
+                disabled={isLoading || tcgCards.length === 0}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4 mr-2" />
+                )}
+                Option 3: PDF Master Set (+ reverses)
+              </Button>
+            </div>
             
             <Button
               onClick={() => {
