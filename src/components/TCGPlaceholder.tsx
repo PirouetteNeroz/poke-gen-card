@@ -19,6 +19,7 @@ const TCGPlaceholder = () => {
   const [apiKey, setApiKey] = useState<string>("");
   const [selectedSet, setSelectedSet] = useState<string>("");
   const [selectedSeries, setSelectedSeries] = useState<string>("");
+  const [setType, setSetType] = useState<"complete" | "master">("complete");
   const [sets, setSets] = useState<PokemonSet[]>([]);
   const [pokemonSeries, setPokemonSeries] = useState<PokemonSeries[]>([]);
   const [tcgCards, setTcgCards] = useState<PokemonCard[]>([]);
@@ -176,10 +177,11 @@ const TCGPlaceholder = () => {
           throw new Error("Cache invalide");
         }
       } else {
-        // Charger depuis l'API avec retry
-        setCurrentStep("Chargement des cartes depuis l'API...");
-        setProgress(25);
-        cards = await fetchWithRetry(() => pokemonTCGAPI.getCards(selectedSetData.id), 3);
+      // Charger depuis l'API avec retry
+      setCurrentStep("Chargement des cartes depuis l'API...");
+      setProgress(25);
+      const query = setType === "master" ? `set.id:${selectedSetData.id}` : `set.id:${selectedSetData.id} -is:holo`;
+      cards = await fetchWithRetry(() => pokemonTCGAPI.searchCards(query), 3);
         
         // Sauvegarder en cache
         localStorage.setItem(cacheKey, JSON.stringify(cards));
@@ -226,7 +228,8 @@ const TCGPlaceholder = () => {
         set: {
           name: card.set.name,
           series: card.set.series
-        }
+        },
+        images: card.images
       }));
 
       await generateTCGPDF(
@@ -342,29 +345,54 @@ const TCGPlaceholder = () => {
             </div>
 
             {selectedSeries && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
-                  Set dans la série "{selectedSeries}"
-                </label>
-                <Select 
-                  value={selectedSet} 
-                  onValueChange={setSelectedSet}
-                  disabled={!selectedSeries}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez un set" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-96">
-                    {pokemonSeries
-                      .find(series => series.name === selectedSeries)
-                      ?.sets.map((set) => (
-                        <SelectItem key={set.id} value={set.id}>
-                          {set.name} ({set.total} cartes) - {new Date(set.releaseDate).getFullYear()}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Set dans la série "{selectedSeries}"
+                  </label>
+                  <Select 
+                    value={selectedSet} 
+                    onValueChange={setSelectedSet}
+                    disabled={!selectedSeries}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez un set" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-96">
+                      {pokemonSeries
+                        .find(series => series.name === selectedSeries)
+                        ?.sets.map((set) => (
+                          <SelectItem key={set.id} value={set.id}>
+                            {set.name} ({set.total} cartes) - {new Date(set.releaseDate).getFullYear()}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Type de collection
+                  </label>
+                  <Select 
+                    value={setType} 
+                    onValueChange={(value: "complete" | "master") => setSetType(value)}
+                    disabled={!selectedSet}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez le type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="complete">
+                        Complete Set (cartes uniques uniquement)
+                      </SelectItem>
+                      <SelectItem value="master">
+                        Master Set (avec cartes holographiques et reverses)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
           </div>
           

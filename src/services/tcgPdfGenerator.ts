@@ -169,29 +169,42 @@ export const generateTCGPDF = async (
     const row = Math.floor(cardCount / cardsPerRow);
     const col = cardCount % cardsPerRow;
     
-    // Try to get Pokemon sprite, fallback to TCG card image
+    // Use real TCG card images directly
     let cardImage = null;
     
-    // First try Pokemon sprite
-    try {
-      const spriteUrl = await getPokemonSprite(card.name);
-      if (spriteUrl) {
-        console.log(`Loading Pokemon sprite for ${card.name}: ${spriteUrl}`);
-        cardImage = await getImageAsBase64(spriteUrl);
-        console.log(`Successfully loaded Pokemon sprite for ${card.name}`);
+    // Try to load TCG card image first (preferred)
+    if (card.images?.large) {
+      try {
+        console.log(`Loading TCG card large image for ${card.name}: ${card.images.large}`);
+        cardImage = await getImageAsBase64(card.images.large);
+        console.log(`Successfully loaded TCG large image for ${card.name}`);
+      } catch (error) {
+        console.log(`Could not load TCG large image for ${card.name}:`, error);
       }
-    } catch (error) {
-      console.log(`Could not load sprite for ${card.name}:`, error);
     }
     
-    // If no Pokemon sprite, try TCG card image
+    // Fallback to small image if large failed
     if (!cardImage && card.images?.small) {
       try {
-        console.log(`Loading TCG card image for ${card.name}: ${card.images.small}`);
+        console.log(`Loading TCG card small image for ${card.name}: ${card.images.small}`);
         cardImage = await getImageAsBase64(card.images.small);
-        console.log(`Successfully loaded TCG card image for ${card.name}`);
+        console.log(`Successfully loaded TCG small image for ${card.name}`);
       } catch (error) {
-        console.log(`Could not load TCG card image for ${card.name}:`, error);
+        console.log(`Could not load TCG small image for ${card.name}:`, error);
+      }
+    }
+    
+    // Final fallback to Pokemon sprite only if no TCG image exists
+    if (!cardImage) {
+      try {
+        const spriteUrl = await getPokemonSprite(card.name);
+        if (spriteUrl) {
+          console.log(`Loading Pokemon sprite as fallback for ${card.name}: ${spriteUrl}`);
+          cardImage = await getImageAsBase64(spriteUrl);
+          console.log(`Successfully loaded Pokemon sprite fallback for ${card.name}`);
+        }
+      } catch (error) {
+        console.log(`Could not load sprite fallback for ${card.name}:`, error);
       }
     }
     
