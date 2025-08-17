@@ -104,24 +104,12 @@ export const generateTCGPDF = async (
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   
-  // Configuration selon le type de PDF
-  let cardWidth, cardHeight, cardsPerRow, cardsPerCol, cardsPerPage;
-  
-  if (pdfType === "sprites") {
-    // Dimensions originales pour sprites (comme avant)
-    cardWidth = 56.1;
-    cardHeight = 77.35;
-    cardsPerRow = Math.floor(pageWidth / cardWidth);
-    cardsPerCol = Math.floor(pageHeight / cardHeight);
-    cardsPerPage = cardsPerRow * cardsPerCol;
-  } else {
-    // Configuration 3x3 pour cartes TCG réelles
-    cardsPerRow = 3;
-    cardsPerCol = 3;
-    cardsPerPage = cardsPerRow * cardsPerCol;
-    cardWidth = pageWidth / cardsPerRow;
-    cardHeight = pageHeight / cardsPerCol;
-  }
+  // Utiliser les mêmes dimensions pour toutes les options (comme les sprites)
+  const cardWidth = 56.1;
+  const cardHeight = 77.35;
+  const cardsPerRow = Math.floor(pageWidth / cardWidth);
+  const cardsPerCol = Math.floor(pageHeight / cardHeight);
+  const cardsPerPage = cardsPerRow * cardsPerCol;
   
   // Marges pour centrer
   const marginX = (pageWidth - (cardsPerRow * cardWidth)) / 2;
@@ -254,30 +242,29 @@ export const generateTCGPDF = async (
     const x = marginX + col * cardWidth;
     const y = marginY + row * cardHeight;
     
-    // Affichage différent selon le type de PDF
-    if (pdfType === "sprites") {
-      // Lignes de découpe comme le Pokédex pour les sprites
-      pdf.setDrawColor(99, 102, 241);
-      pdf.setLineWidth(0.3);
-      pdf.setLineDashPattern([2, 2], 0);
-      
-      if (col > 0) {
-        pdf.line(x, y, x, y + cardHeight);
-      }
-      if (row > 0) {
-        pdf.line(x, y, x + cardWidth, y);
-      }
-      
-      pdf.setLineDashPattern([], 0);
+    // Lignes de découpe pour toutes les options
+    pdf.setDrawColor(99, 102, 241);
+    pdf.setLineWidth(0.3);
+    pdf.setLineDashPattern([2, 2], 0);
+    
+    if (col > 0) {
+      pdf.line(x, y, x, y + cardHeight);
     }
+    if (row > 0) {
+      pdf.line(x, y, x + cardWidth, y);
+    }
+    
+    pdf.setLineDashPattern([], 0);
+    
+    // Configuration du contenu selon le type de PDF
+    const cardPadding = 2.5;
+    const contentX = x + cardPadding;
+    const contentY = y + cardPadding;
+    const contentWidth = cardWidth - (cardPadding * 2);
+    const contentHeight = cardHeight - (cardPadding * 2);
     
     if (pdfType === "sprites") {
       // Affichage avec encadré pour les sprites (comme avant)
-      const cardPadding = 2.5;
-      const contentX = x + cardPadding;
-      const contentY = y + cardPadding;
-      const contentWidth = cardWidth - (cardPadding * 2);
-      const contentHeight = cardHeight - (cardPadding * 2);
       
       // Background blanc comme le Pokédex
       pdf.setFillColor(250, 252, 255);
@@ -386,56 +373,52 @@ export const generateTCGPDF = async (
       pdf.setTextColor(255, 255, 255);
       pdf.text(cardNumber, contentX + contentWidth / 2, numberY + 1, { align: 'center' });
     } else {
-      // Affichage sans encadré pour les cartes TCG (options 2 et 3)
+      // Affichage pour les cartes TCG (options 2 et 3) avec même format que sprites
+      
+      // Background blanc comme le Pokédex
+      pdf.setFillColor(250, 252, 255);
+      pdf.rect(contentX, contentY, contentWidth, contentHeight, 'F');
+      
+      // Bordure de carte noire continue comme le Pokédex
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(1.5);
+      pdf.rect(contentX, contentY, contentWidth, contentHeight);
+      
       if (cardImage) {
         try {
           const isReverse = (card as any).isReverse;
           
-          if (isReverse) {
-            // Ajouter un effet visuel pour les cartes reverse
-            // Fond légèrement coloré pour indiquer que c'est une reverse
-            pdf.setFillColor(240, 230, 255);
-            pdf.rect(x, y, cardWidth, cardHeight, 'F');
-          }
+          // Zone image (prend presque tout l'espace)
+          const imageSize = Math.min(contentWidth * 0.95, contentHeight * 0.95);
+          const imageX = contentX + (contentWidth / 2) - (imageSize / 2);
+          const imageY = contentY + (contentHeight / 2) - (imageSize / 2);
           
-          // Afficher la carte TCG en pleine taille
-          pdf.addImage(cardImage, 'PNG', x, y, cardWidth, cardHeight);
+          // Afficher la carte TCG
+          pdf.addImage(cardImage, 'PNG', imageX, imageY, imageSize, imageSize);
           
           if (isReverse) {
-            // Ajouter un badge "REVERSE" sur les cartes reverse
+            // Badge "REVERSE" pour les cartes reverse
             pdf.setFillColor(128, 0, 128);
-            pdf.rect(x + 2, y + 2, 20, 8, 'F');
+            pdf.rect(contentX + 2, contentY + 2, 20, 8, 'F');
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(6);
             pdf.setTextColor(255, 255, 255);
-            pdf.text('REVERSE', x + 12, y + 7, { align: 'center' });
+            pdf.text('REVERSE', contentX + 12, contentY + 7, { align: 'center' });
           }
         } catch (error) {
           console.log(`Could not add TCG image for ${card.name}`);
           // Placeholder pour carte TCG
-          pdf.setFillColor(248, 250, 252);
-          pdf.rect(x, y, cardWidth, cardHeight, 'F');
-          pdf.setDrawColor(200, 200, 200);
-          pdf.setLineWidth(1);
-          pdf.rect(x, y, cardWidth, cardHeight);
-          
           pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(12);
+          pdf.setFontSize(10);
           pdf.setTextColor(120, 120, 120);
-          pdf.text('TCG Card', x + cardWidth / 2, y + cardHeight / 2, { align: 'center' });
+          pdf.text('TCG Card', contentX + contentWidth / 2, contentY + contentHeight / 2, { align: 'center' });
         }
       } else {
         // Placeholder pour carte TCG
-        pdf.setFillColor(248, 250, 252);
-        pdf.rect(x, y, cardWidth, cardHeight, 'F');
-        pdf.setDrawColor(200, 200, 200);
-        pdf.setLineWidth(1);
-        pdf.rect(x, y, cardWidth, cardHeight);
-        
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(12);
+        pdf.setFontSize(10);
         pdf.setTextColor(120, 120, 120);
-        pdf.text('TCG Card', x + cardWidth / 2, y + cardHeight / 2, { align: 'center' });
+        pdf.text('TCG Card', contentX + contentWidth / 2, contentY + contentHeight / 2, { align: 'center' });
       }
     }
     

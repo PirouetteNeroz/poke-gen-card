@@ -239,17 +239,26 @@ const TCGPlaceholder = () => {
         images: card.images
       }));
 
-      // Pour master set, ajouter les cartes reverse pour commune/uncommon/rare
+      // Pour master set, ajouter les cartes reverse à côté de chaque carte normale
       if (pdfType === "master") {
-        const reverseCards = cardsForPDF
-          .filter(card => ["Common", "Uncommon", "Rare"].includes(card.rarity))
-          .map(card => ({
-            ...card,
-            id: card.id + "_reverse",
-            name: card.name + " (Reverse)",
-            isReverse: true
-          }));
-        cardsForPDF = [...cardsForPDF, ...reverseCards];
+        const newCardsForPDF = [];
+        
+        for (const card of cardsForPDF) {
+          // Ajouter la carte normale
+          newCardsForPDF.push(card);
+          
+          // Si c'est une carte Common, Uncommon ou Rare, ajouter sa version reverse à côté
+          if (["Common", "Uncommon", "Rare"].includes(card.rarity)) {
+            newCardsForPDF.push({
+              ...card,
+              id: card.id + "_reverse",
+              name: card.name + " (Reverse)",
+              isReverse: true
+            });
+          }
+        }
+        
+        cardsForPDF = newCardsForPDF;
       }
 
       await generateTCGPDF(
