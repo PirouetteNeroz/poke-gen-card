@@ -97,7 +97,7 @@ const getImageAsBase64 = async (url: string): Promise<string> => {
 export const generateTCGPDF = async (
   cardsList: TCGCard[],
   setName: string,
-  pdfType: "sprites" | "complete" | "master" = "complete",
+  pdfType: "sprites" | "complete" | "master" | "graded" = "complete",
   onProgress?: (progress: number) => void
 ): Promise<void> => {
   const pdf = new jsPDF('p', 'mm', 'a4');
@@ -373,37 +373,40 @@ export const generateTCGPDF = async (
       pdf.setTextColor(255, 255, 255);
       pdf.text(cardNumber, contentX + contentWidth / 2, numberY + 1, { align: 'center' });
     } else {
-      // Affichage pour les cartes TCG (options 2 et 3) avec même format que sprites
-      
-      // Background blanc comme le Pokédex
-      pdf.setFillColor(250, 252, 255);
-      pdf.rect(contentX, contentY, contentWidth, contentHeight, 'F');
-      
-      // Bordure de carte noire continue comme le Pokédex
-      pdf.setDrawColor(0, 0, 0);
-      pdf.setLineWidth(1.5);
-      pdf.rect(contentX, contentY, contentWidth, contentHeight);
+      // Affichage pour les cartes TCG (options 2, 3 et 4) sans cadre
       
       if (cardImage) {
         try {
           const isReverse = (card as any).isReverse;
+          const isGraded = pdfType === "graded";
           
-          // Zone image (prend presque tout l'espace)
-          const imageSize = Math.min(contentWidth * 0.95, contentHeight * 0.95);
-          const imageX = contentX + (contentWidth / 2) - (imageSize / 2);
-          const imageY = contentY + (contentHeight / 2) - (imageSize / 2);
+          // Zone image (prend tout l'espace disponible)
+          const imageX = contentX;
+          const imageY = contentY;
+          const imageWidth = contentWidth;
+          const imageHeight = contentHeight;
           
-          // Afficher la carte TCG
-          pdf.addImage(cardImage, 'PNG', imageX, imageY, imageSize, imageSize);
+          // Afficher la carte TCG sans cadre
+          pdf.addImage(cardImage, 'PNG', imageX, imageY, imageWidth, imageHeight);
           
           if (isReverse) {
-            // Badge "REVERSE" pour les cartes reverse
+            // Badge "REVERSE" directement sur la carte
             pdf.setFillColor(128, 0, 128);
-            pdf.rect(contentX + 2, contentY + 2, 20, 8, 'F');
+            pdf.rect(imageX + 2, imageY + 2, 20, 8, 'F');
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(6);
             pdf.setTextColor(255, 255, 255);
-            pdf.text('REVERSE', contentX + 12, contentY + 7, { align: 'center' });
+            pdf.text('REVERSE', imageX + 12, imageY + 7, { align: 'center' });
+          }
+          
+          if (isGraded) {
+            // Badge "GRADED" directement sur la carte
+            pdf.setFillColor(255, 215, 0);
+            pdf.rect(imageX + 2, imageY + imageHeight - 12, 25, 10, 'F');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(7);
+            pdf.setTextColor(0, 0, 0);
+            pdf.text('GRADED', imageX + 14.5, imageY + imageHeight - 6, { align: 'center' });
           }
         } catch (error) {
           console.log(`Could not add TCG image for ${card.name}`);

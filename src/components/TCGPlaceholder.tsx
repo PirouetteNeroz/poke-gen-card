@@ -205,7 +205,7 @@ const TCGPlaceholder = () => {
     }
   };
 
-  const handleGeneratePDF = async (pdfType: "sprites" | "complete" | "master") => {
+  const handleGeneratePDF = async (pdfType: "sprites" | "complete" | "master" | "graded") => {
     if (tcgCards.length === 0) {
       toast.error("Veuillez d'abord charger les cartes");
       return;
@@ -220,14 +220,21 @@ const TCGPlaceholder = () => {
     const stepMessages = {
       sprites: "Génération du PDF avec sprites Pokémon...",
       complete: "Génération du PDF Complete Set (3x3)...", 
-      master: "Génération du PDF Master Set (avec reverses)..."
+      master: "Génération du PDF Master Set (avec reverses)...",
+      graded: "Génération du PDF Graded (cartes spéciales)..."
     };
     
     setCurrentStep(stepMessages[pdfType]);
 
     try {
-      // Convertir les cartes au format attendu par le générateur PDF
-      let cardsForPDF = tcgCards.map(card => ({
+      // Convertir et filtrer les cartes selon le type de PDF
+      let cardsForPDF = tcgCards.filter(card => {
+        if (pdfType === "graded") {
+          // Pour graded: exclure Common, Uncommon, Rare et Double Rare
+          return !["Common", "Uncommon", "Rare", "Double Rare"].includes(card.rarity);
+        }
+        return true;
+      }).map(card => ({
         id: card.id,
         name: card.name,
         number: card.number,
@@ -275,7 +282,8 @@ const TCGPlaceholder = () => {
       const successMessages = {
         sprites: "PDF avec sprites Pokémon généré avec succès !",
         complete: "PDF Complete Set généré avec succès !",
-        master: "PDF Master Set généré avec succès !"
+        master: "PDF Master Set généré avec succès !",
+        graded: "PDF Graded généré avec succès !"
       };
       
       toast.success(successMessages[pdfType]);
@@ -486,6 +494,19 @@ const TCGPlaceholder = () => {
                   <Sparkles className="w-4 h-4 mr-2" />
                 )}
                 Option 3: PDF Master Set (+ reverses)
+              </Button>
+              
+              <Button
+                onClick={() => handleGeneratePDF("graded")}
+                disabled={isLoading || tcgCards.length === 0}
+                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:opacity-90"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Option 4: PDF Graded (cartes spéciales)
               </Button>
             </div>
             
