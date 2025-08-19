@@ -390,23 +390,91 @@ export const generateTCGPDF = async (
           pdf.addImage(cardImage, 'PNG', imageX, imageY, imageWidth, imageHeight);
           
           if (isReverse) {
-            // Badge "REVERSE" directement sur la carte
-            pdf.setFillColor(128, 0, 128);
-            pdf.rect(imageX + 2, imageY + 2, 20, 8, 'F');
+            // Effet holographique pour les cartes reverse avec éléments décoratifs
+            
+            // Lignes brillantes en diagonale
+            pdf.setDrawColor(255, 255, 255);
+            pdf.setLineWidth(0.8);
+            for (let i = 0; i < 4; i++) {
+              const offsetX = i * 8;
+              const offsetY = i * 6;
+              pdf.line(imageX + offsetX, imageY + offsetY, imageX + offsetX + 15, imageY + offsetY + 10);
+            }
+            
+            // Étoiles scintillantes
+            pdf.setFillColor(255, 255, 255);
+            const stars = [
+              { x: imageX + 10, y: imageY + 8 },
+              { x: imageX + contentWidth - 15, y: imageY + 12 },
+              { x: imageX + 8, y: imageY + contentHeight - 20 },
+              { x: imageX + contentWidth - 12, y: imageY + contentHeight - 8 }
+            ];
+            
+            stars.forEach(star => {
+              // Dessiner une étoile à 4 branches
+              pdf.setLineWidth(1.5);
+              pdf.setDrawColor(255, 255, 255);
+              pdf.line(star.x - 3, star.y, star.x + 3, star.y);
+              pdf.line(star.x, star.y - 3, star.x, star.y + 3);
+            });
+            
+            // Badge "REVERSE" stylisé avec fond semi-transparent
+            pdf.setFillColor(138, 43, 226, 0.8); // Violet avec transparence
+            pdf.roundedRect(imageX + contentWidth - 25, imageY + 3, 22, 8, 2, 2, 'F');
             pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(6);
+            pdf.setFontSize(5);
             pdf.setTextColor(255, 255, 255);
-            pdf.text('REVERSE', imageX + 12, imageY + 7, { align: 'center' });
+            pdf.text('✦ REVERSE ✦', imageX + contentWidth - 14, imageY + 8, { align: 'center' });
           }
           
           if (isGraded) {
-            // Badge "GRADED" directement sur la carte
+            // Triangle "GRADED" dans le coin gauche
+            const triangleSize = 25;
+            
+            // Dessiner triangle doré avec lignes
             pdf.setFillColor(255, 215, 0);
-            pdf.rect(imageX + 2, imageY + imageHeight - 12, 25, 10, 'F');
+            pdf.setDrawColor(255, 215, 0);
+            pdf.setLineWidth(1);
+            
+            // Points du triangle
+            const trianglePoints = [
+              [imageX, imageY],
+              [imageX + triangleSize, imageY],
+              [imageX, imageY + triangleSize],
+              [imageX, imageY]
+            ];
+            
+            // Remplir le triangle
+            pdf.lines(trianglePoints.slice(0, 3).map(([x, y], i) => 
+              i === 0 ? [x, y] : [x - trianglePoints[0][0], y - trianglePoints[0][1]]
+            ), imageX, imageY, null, 'F');
+            
+            // Bordure du triangle
+            pdf.setDrawColor(184, 134, 11);
+            pdf.setLineWidth(1);
+            pdf.lines(trianglePoints.map(([x, y], i) => 
+              i === 0 ? [x, y] : [x - trianglePoints[0][0], y - trianglePoints[0][1]]
+            ), imageX, imageY);
+            
+            // Texte "GRADED" vertical dans le triangle
             pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(7);
+            pdf.setFontSize(6);
             pdf.setTextColor(0, 0, 0);
-            pdf.text('GRADED', imageX + 14.5, imageY + imageHeight - 6, { align: 'center' });
+            
+            // Positionner le texte verticalement
+            const letters = ['G', 'R', 'A', 'D', 'E', 'D'];
+            letters.forEach((letter, index) => {
+              pdf.text(letter, imageX + 4, imageY + 8 + (index * 2.5));
+            });
+            
+            // Petite étoile dorée
+            pdf.setFillColor(255, 215, 0);
+            const starX = imageX + 15;
+            const starY = imageY + 8;
+            pdf.setLineWidth(1);
+            pdf.setDrawColor(255, 215, 0);
+            pdf.line(starX - 2, starY, starX + 2, starY);
+            pdf.line(starX, starY - 2, starX, starY + 2);
           }
         } catch (error) {
           console.log(`Could not add TCG image for ${card.name}`);
