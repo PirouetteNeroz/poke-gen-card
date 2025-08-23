@@ -415,45 +415,78 @@ const generateSinglePDF = async (
               }
               
               if (isGraded) {
-                // Badge "GRADED" en diagonale simple
-                const badgeX = imageX + 5;
-                const badgeY = imageY + 15;
-                const badgeWidth = 25;
+                // Badge "GRADED" comme dans l'exemple - coin supérieur gauche à 45°
+                const badgeWidth = 30;
                 const badgeHeight = 8;
+                const badgeX = imageX - 10; // Déborde à gauche comme dans l'exemple CSS
+                const badgeY = imageY + 8;
                 
-                // Créer un badge incliné avec des coordonnées calculées
+                // Calculer les points du rectangle roté à 45°
                 const angle = -Math.PI / 4; // -45 degrés
                 const cos = Math.cos(angle);
                 const sin = Math.sin(angle);
                 
-                // Points du rectangle incliné
                 const centerX = badgeX + badgeWidth / 2;
                 const centerY = badgeY + badgeHeight / 2;
                 
-                // Badge rouge avec effet diagonal
-                pdf.setFillColor(220, 38, 127); // Rouge
-                
-                // Créer le badge avec un polygone
+                // Points du rectangle autour du centre
                 const halfWidth = badgeWidth / 2;
                 const halfHeight = badgeHeight / 2;
                 
-                const x1 = centerX + (-halfWidth * cos - (-halfHeight) * sin);
-                const y1 = centerY + (-halfWidth * sin + (-halfHeight) * cos);
-                const x2 = centerX + (halfWidth * cos - (-halfHeight) * sin);
-                const y2 = centerY + (halfWidth * sin + (-halfHeight) * cos);
-                const x3 = centerX + (halfWidth * cos - halfHeight * sin);
-                const y3 = centerY + (halfWidth * sin + halfHeight * cos);
-                const x4 = centerX + (-halfWidth * cos - halfHeight * sin);
-                const y4 = centerY + (-halfWidth * sin + halfHeight * cos);
+                // Calculer les 4 coins du rectangle roté
+                const corners = [
+                  { // Top-left
+                    x: centerX + (-halfWidth * cos - (-halfHeight) * sin),
+                    y: centerY + (-halfWidth * sin + (-halfHeight) * cos)
+                  },
+                  { // Top-right
+                    x: centerX + (halfWidth * cos - (-halfHeight) * sin),
+                    y: centerY + (halfWidth * sin + (-halfHeight) * cos)
+                  },
+                  { // Bottom-right
+                    x: centerX + (halfWidth * cos - halfHeight * sin),
+                    y: centerY + (halfWidth * sin + halfHeight * cos)
+                  },
+                  { // Bottom-left
+                    x: centerX + (-halfWidth * cos - halfHeight * sin),
+                    y: centerY + (-halfWidth * sin + halfHeight * cos)
+                  }
+                ];
                 
-                // Dessiner le polygone
-                pdf.lines([[x2-x1, y2-y1], [x3-x2, y3-y2], [x4-x3, y4-y3], [x1-x4, y1-y4]], x1, y1, null, 'F');
+                // Dessiner l'ombre d'abord (légèrement décalée)
+                const shadowOffset = 1;
+                pdf.setFillColor(0, 0, 0, 0.2);
+                const shadowCorners = corners.map(corner => ({
+                  x: corner.x + shadowOffset,
+                  y: corner.y + shadowOffset
+                }));
                 
-                // Texte "GRADED" (non roté pour simplicité)
+                // Créer le chemin pour l'ombre
+                pdf.lines([
+                  [shadowCorners[1].x - shadowCorners[0].x, shadowCorners[1].y - shadowCorners[0].y],
+                  [shadowCorners[2].x - shadowCorners[1].x, shadowCorners[2].y - shadowCorners[1].y],
+                  [shadowCorners[3].x - shadowCorners[2].x, shadowCorners[3].y - shadowCorners[2].y],
+                  [shadowCorners[0].x - shadowCorners[3].x, shadowCorners[0].y - shadowCorners[3].y]
+                ], shadowCorners[0].x, shadowCorners[0].y, null, 'F');
+                
+                // Dessiner le badge principal en rouge
+                pdf.setFillColor(220, 53, 69); // Rouge comme dans l'exemple
+                pdf.lines([
+                  [corners[1].x - corners[0].x, corners[1].y - corners[0].y],
+                  [corners[2].x - corners[1].x, corners[2].y - corners[1].y],
+                  [corners[3].x - corners[2].x, corners[3].y - corners[2].y],
+                  [corners[0].x - corners[3].x, corners[0].y - corners[3].y]
+                ], corners[0].x, corners[0].y, null, 'F');
+                
+                // Texte "GRADED" positionné au centre et légèrement ajusté pour l'effet visuel
                 pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(5);
+                pdf.setFontSize(6);
                 pdf.setTextColor(255, 255, 255);
-                pdf.text('GRADED', badgeX + 12, badgeY + 5, { align: 'center' });
+                
+                // Ajuster la position du texte pour qu'il soit bien centré dans le badge roté
+                const textX = centerX - 1; // Légèrement décalé pour compenser la rotation visuelle
+                const textY = centerY + 1.5; // Légèrement vers le bas pour le centrage vertical
+                pdf.text('GRADED', textX, textY, { align: 'center' });
               }
             } catch (error) {
               console.log(`Could not add TCG image for ${card.name}:`, error);
