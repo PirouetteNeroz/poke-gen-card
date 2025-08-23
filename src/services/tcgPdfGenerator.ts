@@ -405,13 +405,37 @@ const generateSinglePDF = async (
               pdf.addImage(cardImage, 'PNG', imageX, imageY, imageWidth, imageHeight);
               
               if (isReverse) {
-                // Badge "REVERSE" simple à gauche
-                pdf.setFillColor(138, 43, 226, 0.9);
-                pdf.roundedRect(imageX + 3, imageY + 3, 20, 7, 2, 2, 'F');
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(6);
-                pdf.setTextColor(255, 255, 255);
-                pdf.text('REVERSE', imageX + 13, imageY + 8, { align: 'center' });
+                // Badge "REVERSE" avec image en bas à gauche
+                try {
+                  // URL de l'image du badge reverse
+                  const reverseBadgeUrl = '/lovable-uploads/568fc039-de54-4d9e-873c-075eaff4b2d7.png';
+                  const reverseBadgeImage = await loadImageWithTimeout(reverseBadgeUrl);
+                  
+                  if (reverseBadgeImage) {
+                    const badgeSize = 15; // Taille du badge
+                    const badgeX = imageX + 3; // Position en bas à gauche
+                    const badgeY = imageY + imageHeight - badgeSize - 3;
+                    
+                    pdf.addImage(reverseBadgeImage, 'PNG', badgeX, badgeY, badgeSize, badgeSize);
+                  } else {
+                    // Fallback si l'image ne se charge pas
+                    pdf.setFillColor(138, 43, 226, 0.9);
+                    pdf.roundedRect(imageX + 3, imageY + imageHeight - 10, 20, 7, 2, 2, 'F');
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(6);
+                    pdf.setTextColor(255, 255, 255);
+                    pdf.text('REVERSE', imageX + 13, imageY + imageHeight - 5, { align: 'center' });
+                  }
+                } catch (error) {
+                  console.log('Could not load reverse badge image, using fallback');
+                  // Fallback si erreur
+                  pdf.setFillColor(138, 43, 226, 0.9);
+                  pdf.roundedRect(imageX + 3, imageY + imageHeight - 10, 20, 7, 2, 2, 'F');
+                  pdf.setFont('helvetica', 'bold');
+                  pdf.setFontSize(6);
+                  pdf.setTextColor(255, 255, 255);
+                  pdf.text('REVERSE', imageX + 13, imageY + imageHeight - 5, { align: 'center' });
+                }
               }
               
               if (isGraded) {
