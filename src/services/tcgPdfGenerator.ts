@@ -166,7 +166,7 @@ const generateSinglePDF = async (
   let currentPage = 0;
   let cardCount = 0;
   
-  // Page de titre sobre pour impression comme le Pokédex
+  // Page de titre sobre pour impression comme le Pokédex (seulement pour le premier PDF)
   const addTitlePage = () => {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(28);
@@ -176,7 +176,8 @@ const generateSinglePDF = async (
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
     pdf.setTextColor(0, 0, 0);
-    pdf.text(setName, pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
+    const title = totalPdfs > 1 ? `${setName} (Partie ${pdfNumber}/${totalPdfs})` : setName;
+    pdf.text(title, pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
     
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(16);
@@ -185,7 +186,10 @@ const generateSinglePDF = async (
     
     pdf.setFontSize(12);
     pdf.setTextColor(100, 100, 100);
-    pdf.text(`${cardsList.length} cartes incluses`, pageWidth / 2, pageHeight / 2 + 25, { align: 'center' });
+    const cardInfo = totalPdfs > 1 ? 
+      `${cardsList.length} cartes (${globalStartIndex + 1}-${globalStartIndex + cardsList.length} sur ${totalCards})` :
+      `${cardsList.length} cartes incluses`;
+    pdf.text(cardInfo, pageWidth / 2, pageHeight / 2 + 25, { align: 'center' });
     
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(1);
@@ -202,7 +206,10 @@ const generateSinglePDF = async (
     pdf.text(`Généré le ${currentDate}`, pageWidth / 2, pageHeight - 25, { align: 'center' });
   };
   
-  addTitlePage();
+  // Ajouter la page de titre seulement pour le premier PDF
+  if (pdfNumber === 1) {
+    addTitlePage();
+  }
   
   // Fonction pour nettoyer la mémoire
   const cleanupMemory = () => {
@@ -408,19 +415,57 @@ const generateSinglePDF = async (
               }
               
               if (isGraded) {
-                // Triangle "GRADED" dans le coin supérieur gauche
-                const triangleSize = 15;
+                // Design de carte gradée avec effet blister/protection
+                const padding = 3;
+                const cardBorderRadius = 3;
                 
-                pdf.setFillColor(255, 215, 0);
-                pdf.setDrawColor(184, 134, 11);
+                // Cadre extérieur avec effet blister
+                pdf.setFillColor(240, 240, 240);
+                pdf.setDrawColor(200, 200, 200);
+                pdf.setLineWidth(1);
+                pdf.roundedRect(imageX - padding, imageY - padding, imageWidth + (padding * 2), imageHeight + (padding * 2), cardBorderRadius, cardBorderRadius, 'FD');
+                
+                // Cadre intérieur pour la carte
+                pdf.setFillColor(255, 255, 255);
+                pdf.setDrawColor(180, 180, 180);
                 pdf.setLineWidth(0.5);
+                pdf.roundedRect(imageX - 1, imageY - 1, imageWidth + 2, imageHeight + 2, 2, 2, 'FD');
                 
-                pdf.lines([[triangleSize, 0], [-triangleSize, triangleSize], [0, -triangleSize]], imageX, imageY, null, 'FD');
+                // Badge "GRADED" en haut à droite avec design premium
+                const badgeWidth = 16;
+                const badgeHeight = 6;
+                const badgeX = imageX + imageWidth - badgeWidth - 2;
+                const badgeY = imageY - padding + 1;
                 
+                // Fond du badge avec dégradé simulé
+                pdf.setFillColor(255, 215, 0);
+                pdf.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 2, 2, 'F');
+                
+                // Bordure du badge
+                pdf.setDrawColor(184, 134, 11);
+                pdf.setLineWidth(0.3);
+                pdf.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 2, 2, 'D');
+                
+                // Texte "GRADED"
                 pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(3);
+                pdf.setFontSize(4);
                 pdf.setTextColor(0, 0, 0);
-                pdf.text('GRADED', imageX + 2, imageY + 8);
+                pdf.text('GRADED', badgeX + badgeWidth / 2, badgeY + 4, { align: 'center' });
+                
+                // Note simulée (9.5/10)
+                const gradeX = imageX - padding + 2;
+                const gradeY = imageY + imageHeight + 1;
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(5);
+                pdf.setTextColor(0, 0, 0);
+                pdf.text('9.5', gradeX, gradeY);
+                
+                // Code de certification simulé
+                const certCode = `PSA ${Math.floor(Math.random() * 100000)}`;
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(3);
+                pdf.setTextColor(100, 100, 100);
+                pdf.text(certCode, imageX + imageWidth - 2, gradeY, { align: 'right' });
               }
             } catch (error) {
               console.log(`Could not add TCG image for ${card.name}:`, error);
