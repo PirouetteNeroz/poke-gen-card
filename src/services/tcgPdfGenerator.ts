@@ -99,8 +99,8 @@ export const generateTCGPDF = async (
   pdfType: "sprites" | "complete" | "master" | "graded" = "complete",
   onProgress?: (progress: number) => void
 ): Promise<void> => {
-  // Batch plus petit pour les master sets pour éviter les problèmes de mémoire
-  const BATCH_SIZE = pdfType === "master" ? 15 : 25;
+  // Batch très petit pour les master sets de plus de 100 cartes
+  const BATCH_SIZE = pdfType === "master" ? (cardsList.length > 100 ? 8 : 15) : 25;
   
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -201,12 +201,14 @@ export const generateTCGPDF = async (
             console.log(`Could not load sprite for ${card.name}:`, error);
           }
         } else {
-          // Options TCG avec images de cartes
-          if (card.images?.large) {
-            cardImage = await loadImageWithTimeout(card.images.large);
-          }
-          if (!cardImage && card.images?.small) {
-            cardImage = await loadImageWithTimeout(card.images.small);
+          // Options TCG avec images de cartes - désactiver pour les gros master sets
+          if (pdfType !== "master" || cardsList.length <= 100) {
+            if (card.images?.large) {
+              cardImage = await loadImageWithTimeout(card.images.large);
+            }
+            if (!cardImage && card.images?.small) {
+              cardImage = await loadImageWithTimeout(card.images.small);
+            }
           }
         }
         
