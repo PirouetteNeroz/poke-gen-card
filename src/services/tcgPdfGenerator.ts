@@ -99,8 +99,56 @@ export const generateTCGPDF = async (
   pdfType: "sprites" | "complete" | "master" | "graded" = "complete",
   onProgress?: (progress: number) => void
 ): Promise<void> => {
+  const cardWidth = 56.1;
+  const cardHeight = 77.35;
+  const pageWidth = 210; // A4 width in mm
+  const pageHeight = 297; // A4 height in mm
+  const cardsPerRow = Math.floor(pageWidth / cardWidth);
+  const cardsPerCol = Math.floor(pageHeight / cardHeight);
+  const cardsPerPage = cardsPerRow * cardsPerCol;
+  
+  // Limite de 8 pages par PDF pour éviter les erreurs de mémoire
+  const MAX_PAGES_PER_PDF = 8;
+  const maxCardsPerPdf = MAX_PAGES_PER_PDF * cardsPerPage;
+  
+  // Diviser les cartes en chunks de 8 pages maximum
+  const totalPdfs = Math.ceil(cardsList.length / maxCardsPerPdf);
+  
+  for (let pdfIndex = 0; pdfIndex < totalPdfs; pdfIndex++) {
+    const startIndex = pdfIndex * maxCardsPerPdf;
+    const endIndex = Math.min(startIndex + maxCardsPerPdf, cardsList.length);
+    const currentCards = cardsList.slice(startIndex, endIndex);
+    
+    await generateSinglePDF(
+      currentCards, 
+      setName, 
+      pdfType, 
+      pdfIndex + 1, 
+      totalPdfs,
+      startIndex,
+      cardsList.length,
+      onProgress
+    );
+    
+    // Délai entre les PDF pour éviter la surcharge
+    if (pdfIndex < totalPdfs - 1) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+};
+
+const generateSinglePDF = async (
+  cardsList: TCGCard[],
+  setName: string,
+  pdfType: "sprites" | "complete" | "master" | "graded",
+  pdfNumber: number,
+  totalPdfs: number,
+  globalStartIndex: number,
+  totalCards: number,
+  onProgress?: (progress: number) => void
+): Promise<void> => {
   // Batch très petit pour les master sets de plus de 100 cartes
-  const BATCH_SIZE = pdfType === "master" ? (cardsList.length > 100 ? 8 : 15) : 25;
+  const BATCH_SIZE = pdfType === "master" ? (totalCards > 100 ? 8 : 15) : 25;
   
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -396,8 +444,8 @@ export const generateTCGPDF = async (
         }
         
         if (onProgress) {
-          const progress = ((i + 1) / cardsList.length) * 100;
-          onProgress(progress);
+          const globalProgress = ((globalStartIndex + i + 1) / totalCards) * 100;
+          onProgress(globalProgress);
         }
       } catch (error) {
         console.error(`Error processing card ${cardsList[i]?.name || i}:`, error);
