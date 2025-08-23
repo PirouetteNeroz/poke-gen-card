@@ -408,7 +408,7 @@ const generateSinglePDF = async (
                 // Badge "REVERSE" avec image en bas à gauche
                 try {
                   // URL de l'image du badge reverse
-                  const reverseBadgeUrl = '/lovable-uploads/568fc039-de54-4d9e-873c-075eaff4b2d7.png';
+                  const reverseBadgeUrl = 'https://i.postimg.cc/0QhhJRCN/Carte-avec-banni-re-REVERSE.png';
                   const reverseBadgeImage = await loadImageWithTimeout(reverseBadgeUrl);
                   
                   if (reverseBadgeImage) {
