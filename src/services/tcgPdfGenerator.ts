@@ -415,57 +415,45 @@ const generateSinglePDF = async (
               }
               
               if (isGraded) {
-                // Design de carte gradée avec effet blister/protection
-                const padding = 3;
-                const cardBorderRadius = 3;
+                // Badge "GRADED" en diagonale simple
+                const badgeX = imageX + 5;
+                const badgeY = imageY + 15;
+                const badgeWidth = 25;
+                const badgeHeight = 8;
                 
-                // Cadre extérieur avec effet blister
-                pdf.setFillColor(240, 240, 240);
-                pdf.setDrawColor(200, 200, 200);
-                pdf.setLineWidth(1);
-                pdf.roundedRect(imageX - padding, imageY - padding, imageWidth + (padding * 2), imageHeight + (padding * 2), cardBorderRadius, cardBorderRadius, 'FD');
+                // Créer un badge incliné avec des coordonnées calculées
+                const angle = -Math.PI / 4; // -45 degrés
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
                 
-                // Cadre intérieur pour la carte
-                pdf.setFillColor(255, 255, 255);
-                pdf.setDrawColor(180, 180, 180);
-                pdf.setLineWidth(0.5);
-                pdf.roundedRect(imageX - 1, imageY - 1, imageWidth + 2, imageHeight + 2, 2, 2, 'FD');
+                // Points du rectangle incliné
+                const centerX = badgeX + badgeWidth / 2;
+                const centerY = badgeY + badgeHeight / 2;
                 
-                // Badge "GRADED" en haut à droite avec design premium
-                const badgeWidth = 16;
-                const badgeHeight = 6;
-                const badgeX = imageX + imageWidth - badgeWidth - 2;
-                const badgeY = imageY - padding + 1;
+                // Badge rouge avec effet diagonal
+                pdf.setFillColor(220, 38, 127); // Rouge
                 
-                // Fond du badge avec dégradé simulé
-                pdf.setFillColor(255, 215, 0);
-                pdf.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 2, 2, 'F');
+                // Créer le badge avec un polygone
+                const halfWidth = badgeWidth / 2;
+                const halfHeight = badgeHeight / 2;
                 
-                // Bordure du badge
-                pdf.setDrawColor(184, 134, 11);
-                pdf.setLineWidth(0.3);
-                pdf.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 2, 2, 'D');
+                const x1 = centerX + (-halfWidth * cos - (-halfHeight) * sin);
+                const y1 = centerY + (-halfWidth * sin + (-halfHeight) * cos);
+                const x2 = centerX + (halfWidth * cos - (-halfHeight) * sin);
+                const y2 = centerY + (halfWidth * sin + (-halfHeight) * cos);
+                const x3 = centerX + (halfWidth * cos - halfHeight * sin);
+                const y3 = centerY + (halfWidth * sin + halfHeight * cos);
+                const x4 = centerX + (-halfWidth * cos - halfHeight * sin);
+                const y4 = centerY + (-halfWidth * sin + halfHeight * cos);
                 
-                // Texte "GRADED"
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(4);
-                pdf.setTextColor(0, 0, 0);
-                pdf.text('GRADED', badgeX + badgeWidth / 2, badgeY + 4, { align: 'center' });
+                // Dessiner le polygone
+                pdf.lines([[x2-x1, y2-y1], [x3-x2, y3-y2], [x4-x3, y4-y3], [x1-x4, y1-y4]], x1, y1, null, 'F');
                 
-                // Note simulée (9.5/10)
-                const gradeX = imageX - padding + 2;
-                const gradeY = imageY + imageHeight + 1;
+                // Texte "GRADED" (non roté pour simplicité)
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(5);
-                pdf.setTextColor(0, 0, 0);
-                pdf.text('9.5', gradeX, gradeY);
-                
-                // Code de certification simulé
-                const certCode = `PSA ${Math.floor(Math.random() * 100000)}`;
-                pdf.setFont('helvetica', 'normal');
-                pdf.setFontSize(3);
-                pdf.setTextColor(100, 100, 100);
-                pdf.text(certCode, imageX + imageWidth - 2, gradeY, { align: 'right' });
+                pdf.setTextColor(255, 255, 255);
+                pdf.text('GRADED', badgeX + 12, badgeY + 5, { align: 'center' });
               }
             } catch (error) {
               console.log(`Could not add TCG image for ${card.name}:`, error);
