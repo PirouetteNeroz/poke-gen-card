@@ -412,9 +412,9 @@ const generateSinglePDF = async (
                   const reverseBadgeImage = await loadImageWithTimeout(reverseBadgeUrl);
                   
                   if (reverseBadgeImage) {
-                    const badgeSize = 30; // Taille du badge
-                    const badgeX = imageX + imageWidth - badgeSize; // Position en bas à gauche
-                    const badgeY = imageY + imageHeight - badgeSize;
+                    const badgeSize = 20; // Taille du badge
+                    const badgeX = imageX + imageWidth - badgeSize - 10; // Position en bas à gauche
+                    const badgeY = imageY + imageHeight - badgeSize - 10;
                     
                     pdf.addImage(reverseBadgeImage, 'PNG', badgeX, badgeY, badgeSize, badgeSize);
                   } else {
