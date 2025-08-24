@@ -438,7 +438,7 @@ const generateSinglePDF = async (
                 }
               }
 
-             /* if (isGraded) {
+             if (isGraded) {
                 // Badge "GRADED" comme dans l'exemple - coin supérieur gauche à 45°
                 const badgeWidth = 30;
                 const badgeHeight = 8;
@@ -524,7 +524,7 @@ const generateSinglePDF = async (
             pdf.setFontSize(10);
             pdf.setTextColor(120, 120, 120);
             pdf.text('TCG Card', contentX + contentWidth / 2, contentY + contentHeight / 2, { align: 'center' });
-          }*/
+          }
         }
         
         cardCount++;
