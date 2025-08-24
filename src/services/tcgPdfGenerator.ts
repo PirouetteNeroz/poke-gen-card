@@ -438,7 +438,7 @@ const generateSinglePDF = async (
                 }
               }
 
-             if (isGraded) {
+             /*if (isGraded) {
                 // Badge "GRADED" comme dans l'exemple - coin supérieur gauche à 45°
                 const badgeWidth = 30;
                 const badgeHeight = 8;
@@ -511,7 +511,43 @@ const generateSinglePDF = async (
                 const textX = centerX - 1; // Légèrement décalé pour compenser la rotation visuelle
                 const textY = centerY + 1.5; // Légèrement vers le bas pour le centrage vertical
                 pdf.text('GRADED', textX, textY, { align: 'center' });
+              }*/
+
+              if (isGraded) {
+                // Badge "REVERSE" avec image en bas à gauche
+                try {
+                  // URL de l'image du badge reverse
+                  const reverseBadgeUrl = 'https://i.postimg.cc/0QhhJRCN/Carte-avec-banni-re-REVERSE.png';
+                  const reverseBadgeImage = await loadImageWithTimeout(reverseBadgeUrl);
+                  
+                  if (reverseBadgeImage) {
+                    const badgeSize = 20; // Taille du badge
+                    const badgeX = imageX + imageWidth - badgeSize - 10; // Position en bas à gauche
+                    const badgeY = imageY + imageHeight - badgeSize - 10;
+                    
+                    pdf.addImage(reverseBadgeImage, 'PNG', badgeX, badgeY, badgeSize, badgeSize);
+                  } else {
+                    // Fallback si l'image ne se charge pas
+                    pdf.setFillColor(138, 43, 226, 0.9);
+                    pdf.roundedRect(imageX + 3, imageY + imageHeight - 10, 20, 7, 2, 2, 'F');
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(6);
+                    pdf.setTextColor(255, 255, 255);
+                    pdf.text('REVERSE', imageX + 13, imageY + imageHeight - 5, { align: 'center' });
+                  }
+                } catch (error) {
+                  console.log('Could not load reverse badge image, using fallback');
+                  // Fallback si erreur
+                  pdf.setFillColor(138, 43, 226, 0.9);
+                  pdf.roundedRect(imageX + 3, imageY + imageHeight - 10, 20, 7, 2, 2, 'F');
+                  pdf.setFont('helvetica', 'bold');
+                  pdf.setFontSize(6);
+                  pdf.setTextColor(255, 255, 255);
+                  pdf.text('REVERSE', imageX + 13, imageY + imageHeight - 5, { align: 'center' });
+                }
               }
+
+
             } catch (error) {
               console.log(`Could not add TCG image for ${card.name}:`, error);
               pdf.setFont('helvetica', 'bold');
