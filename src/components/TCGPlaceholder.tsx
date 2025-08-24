@@ -231,7 +231,7 @@ const TCGPlaceholder = () => {
       let cardsForPDF = tcgCards.filter(card => {
         if (pdfType === "graded") {
           // Pour graded: exclure Common, Uncommon, Rare et Double Rare
-          return !["Common", "Uncommon", "Rare", "Double Rare"].includes(card.rarity);
+          return !["Common", "Uncommon", "Rare", "Double Rare", "ACE SPEC"].includes(card.rarity);
         }
         return true;
       }).map(card => ({
