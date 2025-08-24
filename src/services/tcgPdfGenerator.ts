@@ -438,80 +438,7 @@ const generateSinglePDF = async (
                 }
               }
 
-             /*if (isGraded) {
-                // Badge "GRADED" comme dans l'exemple - coin supérieur gauche à 45°
-                const badgeWidth = 30;
-                const badgeHeight = 8;
-                const badgeX = imageX - 10; // Déborde à gauche comme dans l'exemple CSS
-                const badgeY = imageY + 8;
-                
-                // Calculer les points du rectangle roté à 45°
-                const angle = -Math.PI / 4; // -45 degrés
-                const cos = Math.cos(angle);
-                const sin = Math.sin(angle);
-                
-                const centerX = badgeX + badgeWidth / 2;
-                const centerY = badgeY + badgeHeight / 2;
-                
-                // Points du rectangle autour du centre
-                const halfWidth = badgeWidth / 2;
-                const halfHeight = badgeHeight / 2;
-                
-                // Calculer les 4 coins du rectangle roté
-                const corners = [
-                  { // Top-left
-                    x: centerX + (-halfWidth * cos - (-halfHeight) * sin),
-                    y: centerY + (-halfWidth * sin + (-halfHeight) * cos)
-                  },
-                  { // Top-right
-                    x: centerX + (halfWidth * cos - (-halfHeight) * sin),
-                    y: centerY + (halfWidth * sin + (-halfHeight) * cos)
-                  },
-                  { // Bottom-right
-                    x: centerX + (halfWidth * cos - halfHeight * sin),
-                    y: centerY + (halfWidth * sin + halfHeight * cos)
-                  },
-                  { // Bottom-left
-                    x: centerX + (-halfWidth * cos - halfHeight * sin),
-                    y: centerY + (-halfWidth * sin + halfHeight * cos)
-                  }
-                ];
-                
-                // Dessiner l'ombre d'abord (légèrement décalée)
-                const shadowOffset = 1;
-                pdf.setFillColor(0, 0, 0, 0.2);
-                const shadowCorners = corners.map(corner => ({
-                  x: corner.x + shadowOffset,
-                  y: corner.y + shadowOffset
-                }));
-                
-                // Créer le chemin pour l'ombre
-                pdf.lines([
-                  [shadowCorners[1].x - shadowCorners[0].x, shadowCorners[1].y - shadowCorners[0].y],
-                  [shadowCorners[2].x - shadowCorners[1].x, shadowCorners[2].y - shadowCorners[1].y],
-                  [shadowCorners[3].x - shadowCorners[2].x, shadowCorners[3].y - shadowCorners[2].y],
-                  [shadowCorners[0].x - shadowCorners[3].x, shadowCorners[0].y - shadowCorners[3].y]
-                ], shadowCorners[0].x, shadowCorners[0].y, null, 'F');
-                
-                // Dessiner le badge principal en rouge
-                pdf.setFillColor(220, 53, 69); // Rouge comme dans l'exemple
-                pdf.lines([
-                  [corners[1].x - corners[0].x, corners[1].y - corners[0].y],
-                  [corners[2].x - corners[1].x, corners[2].y - corners[1].y],
-                  [corners[3].x - corners[2].x, corners[3].y - corners[2].y],
-                  [corners[0].x - corners[3].x, corners[0].y - corners[3].y]
-                ], corners[0].x, corners[0].y, null, 'F');
-                
-                // Texte "GRADED" positionné au centre et légèrement ajusté pour l'effet visuel
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(6);
-                pdf.setTextColor(255, 255, 255);
-                
-                // Ajuster la position du texte pour qu'il soit bien centré dans le badge roté
-                const textX = centerX - 1; // Légèrement décalé pour compenser la rotation visuelle
-                const textY = centerY + 1.5; // Légèrement vers le bas pour le centrage vertical
-                pdf.text('GRADED', textX, textY, { align: 'center' });
-              }*/
+             
 
               if (isGraded) {
                 // Badge "REVERSE" avec image en bas à gauche
@@ -521,9 +448,9 @@ const generateSinglePDF = async (
                   const gradedBadgeImage = await loadImageWithTimeout(gradedBadgeUrl);
                   
                   if (gradedBadgeImage) {
-                    const badgeSize = 20; // Taille du badge
-                    const badgeX = imageX + 3; // Position en bas à gauche
-                    const badgeY = imageY + 3;
+                    const badgeSize = 30; // Taille du badge
+                    const badgeX = imageX; // Position en bas à gauche
+                    const badgeY = imageY;
                     
                     pdf.addImage(gradedBadgeImage, 'PNG', badgeX, badgeY, badgeSize, badgeSize);
                   } else {
