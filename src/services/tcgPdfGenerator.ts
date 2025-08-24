@@ -517,15 +517,15 @@ const generateSinglePDF = async (
                 // Badge "REVERSE" avec image en bas à gauche
                 try {
                   // URL de l'image du badge reverse
-                  const reverseBadgeUrl = 'https://i.postimg.cc/0QhhJRCN/Carte-avec-banni-re-REVERSE.png';
-                  const reverseBadgeImage = await loadImageWithTimeout(reverseBadgeUrl);
+                  const gradedBadgeUrl = 'https://i.postimg.cc/qq3q5p9n/Sans-titre.png';
+                  const gradedBadgeImage = await loadImageWithTimeout(gradedBadgeUrl);
                   
-                  if (reverseBadgeImage) {
+                  if (gradedBadgeImage) {
                     const badgeSize = 20; // Taille du badge
-                    const badgeX = imageX + imageWidth - badgeSize - 10; // Position en bas à gauche
-                    const badgeY = imageY + imageHeight - badgeSize - 10;
+                    const badgeX = imageX + 3; // Position en bas à gauche
+                    const badgeY = imageY + 3;
                     
-                    pdf.addImage(reverseBadgeImage, 'PNG', badgeX, badgeY, badgeSize, badgeSize);
+                    pdf.addImage(gradedBadgeImage, 'PNG', badgeX, badgeY, badgeSize, badgeSize);
                   } else {
                     // Fallback si l'image ne se charge pas
                     pdf.setFillColor(138, 43, 226, 0.9);
@@ -533,17 +533,17 @@ const generateSinglePDF = async (
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(6);
                     pdf.setTextColor(255, 255, 255);
-                    pdf.text('REVERSE', imageX + 13, imageY + imageHeight - 5, { align: 'center' });
+                    pdf.text('GRADED', imageX + 13, imageY + imageHeight - 5, { align: 'center' });
                   }
                 } catch (error) {
-                  console.log('Could not load reverse badge image, using fallback');
+                  console.log('Could not load graded badge image, using fallback');
                   // Fallback si erreur
                   pdf.setFillColor(138, 43, 226, 0.9);
                   pdf.roundedRect(imageX + 3, imageY + imageHeight - 10, 20, 7, 2, 2, 'F');
                   pdf.setFont('helvetica', 'bold');
                   pdf.setFontSize(6);
                   pdf.setTextColor(255, 255, 255);
-                  pdf.text('REVERSE', imageX + 13, imageY + imageHeight - 5, { align: 'center' });
+                  pdf.text('Graded', imageX + 13, imageY + imageHeight - 5, { align: 'center' });
                 }
               }
 
