@@ -72,7 +72,7 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
     const formsResponse = await axios.get(`${POKEAPI_BASE_URL}/pokemon-form?limit=2000`);
     const allForms = formsResponse.data.results;
     
-    // Filtrer les formes spéciales
+    // Filtrer uniquement les formes spéciales demandées
     const specialFormUrls = allForms.filter((form: any) => {
       const name = form.name.toLowerCase();
       return name.includes('mega') || 
@@ -81,8 +81,7 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
              name.includes('hisui') || 
              name.includes('paldea') ||
              name.includes('gmax') ||
-             name.includes('gigantamax') ||
-             (name.includes('-') && !name.includes('nidoran') && !name.includes('mr-mime') && !name.includes('mime-jr'));
+             name.includes('gigantamax');
     });
 
     const batchSize = 10;
