@@ -75,8 +75,15 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
     // Filtrer uniquement les formes spéciales demandées
     const specialFormUrls = allForms.filter((form: any) => {
       const name = form.name.toLowerCase();
-      return name.includes('mega') || 
-             name.includes('alola') || 
+      
+      // Exclure les faux positifs
+      if (name.includes('meganium') || name.includes('yanmega') || 
+          name.includes('totem-alola') || name.includes('alola-cap')) {
+        return false;
+      }
+      
+      return (name.includes('mega-') && !name.includes('meganium')) || 
+             (name.includes('alola') && !name.includes('totem-alola') && !name.includes('alola-cap')) || 
              name.includes('galar') || 
              name.includes('hisui') || 
              name.includes('paldea') ||
@@ -100,6 +107,24 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
           
           let formName = formData.form_name || pokemonData.name;
           
+          // Déterminer le type de forme pour l'affichage
+          const formType = form.name.toLowerCase();
+          let formSuffix = '';
+          
+          if (formType.includes('mega')) {
+            formSuffix = 'Mega';
+          } else if (formType.includes('alola')) {
+            formSuffix = 'Alola';
+          } else if (formType.includes('galar')) {
+            formSuffix = 'Galar';
+          } else if (formType.includes('hisui')) {
+            formSuffix = 'Hisui';
+          } else if (formType.includes('paldea')) {
+            formSuffix = 'Paldea';
+          } else if (formType.includes('gmax') || formType.includes('gigantamax')) {
+            formSuffix = 'Gmax';
+          }
+          
           // Localisation du nom si nécessaire
           if (language !== 'en') {
             try {
@@ -107,15 +132,15 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
               const nameEntry = speciesResponse.data.names.find((n: any) => n.language.name === language);
               if (nameEntry) {
                 formName = nameEntry.name;
-                // Ajouter le suffixe de forme si disponible
-                if (formData.form_name && formData.form_name !== pokemonData.name) {
-                  const formSuffix = formData.form_name.replace(pokemonData.name + '-', '');
-                  formName += ` (${formSuffix})`;
-                }
               }
             } catch (e) {
               console.warn(`Pas de nom localisé pour ${formData.form_name}`);
             }
+          }
+          
+          // Ajouter le suffixe de forme
+          if (formSuffix) {
+            formName += ` (${formSuffix})`;
           }
 
           return {
