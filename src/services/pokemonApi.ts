@@ -58,9 +58,73 @@ export const getGenerationRange = (generation: string): { start: number; end: nu
     "8": { start: 810, end: 905 },
     "9": { start: 906, end: 1025 },
     "all": { start: 1, end: 1025 },
+    "special": { start: 1, end: 1025 }, // Formes spéciales
   };
   
   return ranges[generation] || ranges["1"];
+};
+
+export const fetchSpecialForms = async (language: string, onProgress?: (progress: number) => void): Promise<Pokemon[]> => {
+  const specialForms: Pokemon[] = [];
+  
+  // IDs des Pokémon connus pour avoir des formes spéciales (Mega, régionales, Gmax)
+  const specialPokemonIds = [
+    // Kanto avec formes Alolan
+    19, 20, 26, 27, 28, 37, 38, 50, 51, 52, 53, 74, 75, 76, 88, 89, 103, 105,
+    // Johto avec formes spéciales
+    144, 145, 146, 150,
+    // Hoenn avec Mega
+    254, 257, 260, 302, 303, 306, 308, 310, 319, 323, 334, 354, 359, 362, 373, 376, 380, 381, 384,
+    // Sinnoh avec formes spéciales
+    422, 423, 483, 484, 487,
+    // Unova avec formes spéciales
+    550, 555, 562, 563, 618, 628,
+    // Kalos avec Mega
+    658, 681, 719,
+    // Galar avec formes spéciales
+    77, 78, 79, 80, 83, 110, 122, 199, 222, 263, 264, 554, 618
+  ];
+
+  const batchSize = 5;
+  let processed = 0;
+  
+  for (let i = 0; i < specialPokemonIds.length; i += batchSize) {
+    const batch = specialPokemonIds.slice(i, i + batchSize);
+    const batchPromises = batch.map(id => fetchPokemon(id, language));
+    
+    try {
+      const results = await Promise.allSettled(batchPromises);
+      
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          // Filtrer pour ne garder que les formes spéciales
+          const specialVarieties = result.value.filter(pokemon => {
+            const name = pokemon.name.toLowerCase();
+            return name.includes('mega') || 
+                   name.includes('alola') || 
+                   name.includes('galar') || 
+                   name.includes('hisui') || 
+                   name.includes('paldea') ||
+                   name.includes('gmax') ||
+                   name.includes('gigantamax') ||
+                   name.includes('-') && !name.includes('nidoran'); // Autres formes alternatives
+          });
+          specialForms.push(...specialVarieties);
+        }
+      }
+      
+      processed += batch.length;
+      if (onProgress) {
+        onProgress((processed / specialPokemonIds.length) * 100);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch (error) {
+      console.error(`Erreur batch formes spéciales ${i}:`, error);
+    }
+  }
+  
+  return specialForms.sort((a, b) => a.id - b.id);
 };
 
 export const fetchPokemon = async (id: number, language: string): Promise<Pokemon[]> => {
@@ -116,6 +180,11 @@ export const fetchPokemonBatch = async (
   language: string,
   onProgress?: (progress: number) => void
 ): Promise<Pokemon[]> => {
+  // Si c'est les formes spéciales, utiliser la fonction dédiée
+  if (generation === 'special') {
+    return fetchSpecialForms(language, onProgress);
+  }
+
   const { start, end } = getGenerationRange(generation);
   const pokemonList: Pokemon[] = [];
   const batchSize = 10; // batch réduit pour limiter la charge sur l'API
@@ -133,7 +202,19 @@ export const fetchPokemonBatch = async (
 
       for (const result of batchResults) {
         if (result.status === 'fulfilled') {
-          pokemonList.push(...result.value);
+          // Pour les générations normales, ne garder que la forme par défaut
+          const defaultForms = result.value.filter(pokemon => {
+            const name = pokemon.name.toLowerCase();
+            return !name.includes('mega') && 
+                   !name.includes('alola') && 
+                   !name.includes('galar') && 
+                   !name.includes('hisui') && 
+                   !name.includes('paldea') &&
+                   !name.includes('gmax') &&
+                   !name.includes('gigantamax') &&
+                   (!name.includes('-') || name.includes('nidoran') || name.includes('mr-mime') || name.includes('mime-jr'));
+          });
+          pokemonList.push(...defaultForms);
         }
       }
 
@@ -142,7 +223,7 @@ export const fetchPokemonBatch = async (
         onProgress(progress);
       }
 
-      // petit délai pour éviter de spammer l’API
+      // petit délai pour éviter de spammer l'API
       await new Promise(resolve => setTimeout(resolve, 150));
     } catch (error) {
       console.error(`Erreur batch ${i}-${batchEnd}:`, error);
