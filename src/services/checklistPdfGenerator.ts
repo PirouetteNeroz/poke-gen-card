@@ -25,7 +25,7 @@ export const generateChecklistPDF = async (
   const headerHeight = 12;
   
   // Colonnes du tableau pour chaque colonne de Pokémon
-  const colWidths = [20, columnWidth - 35, 15]; // Numéro, Nom, Case
+  const colWidths = [18, columnWidth - 28, 10]; // Numéro, Nom, Case
   const leftColumnStart = margin;
   const rightColumnStart = margin + columnWidth + columnGap;
   
@@ -169,7 +169,7 @@ export const generateChecklistPDF = async (
     }
     
     // Troncature intelligente pour préserver les variations
-    const maxNameLength = 18; // Augmenté pour les variations
+    const maxNameLength = 25; // Augmenté pour mieux afficher les variations
     let truncatedName = displayName;
     
     if (displayName.length > maxNameLength) {
