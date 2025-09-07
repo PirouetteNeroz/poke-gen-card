@@ -151,14 +151,44 @@ export const generateChecklistPDF = async (
     pdf.setTextColor(99, 102, 241); // Violet/indigo
     pdf.text(pokemonNumber, colPositions[0] + colWidths[0] / 2, y + 4.5, { align: 'center' });
     
-    // Nom (tronqué si trop long)
+    // Nom avec variations (tronqué si trop long)
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(55, 65, 81);
-    const displayName = pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
-    const maxNameLength = 12;
-    const truncatedName = displayName.length > maxNameLength 
-      ? displayName.substring(0, maxNameLength - 1) + '.' 
-      : displayName;
+    
+    // Préserver les variations entre parenthèses
+    let displayName = pokemon.name;
+    
+    // Capitaliser le nom principal (avant les parenthèses si elles existent)
+    const parenStartIndex = displayName.indexOf('(');
+    if (parenStartIndex > 0) {
+      const baseName = displayName.substring(0, parenStartIndex).trim();
+      const variation = displayName.substring(parenStartIndex);
+      displayName = baseName.charAt(0).toUpperCase() + baseName.slice(1) + ' ' + variation;
+    } else {
+      displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+    }
+    
+    // Troncature intelligente pour préserver les variations
+    const maxNameLength = 18; // Augmenté pour les variations
+    let truncatedName = displayName;
+    
+    if (displayName.length > maxNameLength) {
+      const parenIndex = displayName.lastIndexOf('(');
+      if (parenIndex > 0 && parenIndex < maxNameLength) {
+        // Si la variation tient dans la limite, garder le nom complet mais tronquer le nom de base
+        const baseName = displayName.substring(0, parenIndex).trim();
+        const variation = displayName.substring(parenIndex);
+        const maxBaseLength = maxNameLength - variation.length - 1;
+        if (maxBaseLength > 3) {
+          truncatedName = baseName.substring(0, maxBaseLength - 1) + '.' + ' ' + variation;
+        } else {
+          truncatedName = displayName.substring(0, maxNameLength - 1) + '.';
+        }
+      } else {
+        truncatedName = displayName.substring(0, maxNameLength - 1) + '.';
+      }
+    }
+    
     pdf.text(truncatedName, colPositions[1] + 2, y + 4.5);
     
     // Case à cocher améliorée
