@@ -125,17 +125,15 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
             formSuffix = 'Gmax';
           }
           
-          // Localisation du nom si nécessaire
-          if (language !== 'en') {
-            try {
-              const speciesResponse = await axios.get(pokemonData.species.url);
-              const nameEntry = speciesResponse.data.names.find((n: any) => n.language.name === language);
-              if (nameEntry) {
-                formName = nameEntry.name;
-              }
-            } catch (e) {
-              console.warn(`Pas de nom localisé pour ${formData.form_name}`);
+          // Toujours récupérer le nom localisé depuis l'espèce
+          try {
+            const speciesResponse = await axios.get(pokemonData.species.url);
+            const nameEntry = speciesResponse.data.names.find((n: any) => n.language.name === language);
+            if (nameEntry) {
+              formName = nameEntry.name;
             }
+          } catch (e) {
+            console.warn(`Pas de nom localisé pour ${formData.form_name}`);
           }
           
           // Ajouter le suffixe de forme
@@ -202,14 +200,13 @@ export const fetchPokemon = async (id: number, language: string): Promise<Pokemo
         const formData = formResponse.data;
 
         let formName = formData.name;
-        if (language !== 'en') {
-          try {
-            const localizedSpeciesResponse = await axios.get<PokemonSpeciesResponse>(formData.species.url);
-            const nameEntry = localizedSpeciesResponse.data.names.find(n => n.language.name === language);
-            if (nameEntry) formName = nameEntry.name;
-          } catch (e) {
-            console.warn(`Pas de nom localisé pour ${formData.name}`);
-          }
+        // Toujours récupérer le nom localisé depuis l'espèce
+        try {
+          const localizedSpeciesResponse = await axios.get<PokemonSpeciesResponse>(formData.species.url);
+          const nameEntry = localizedSpeciesResponse.data.names.find(n => n.language.name === language);
+          if (nameEntry) formName = nameEntry.name;
+        } catch (e) {
+          console.warn(`Pas de nom localisé pour ${formData.name}`);
         }
 
         forms.push({
