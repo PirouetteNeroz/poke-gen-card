@@ -67,109 +67,214 @@ export const getGenerationRange = (generation: string): { start: number; end: nu
 export const fetchSpecialForms = async (language: string, onProgress?: (progress: number) => void): Promise<Pokemon[]> => {
   const specialForms: Pokemon[] = [];
   
+  // Liste exhaustive des Pokémon Mega
+  const megaPokemonIds = [
+    3, 6, 9, 15, 18, 65, 80, 94, 115, 127, 130, 142, 150, 181, 208, 212, 214, 229, 
+    248, 254, 257, 260, 282, 302, 303, 306, 308, 310, 319, 323, 334, 354, 359, 
+    362, 373, 376, 380, 381, 384, 428, 445, 448, 460
+  ];
+
+  // Liste des formes régionales par région
+  const regionalForms = {
+    alola: [19, 20, 26, 27, 28, 37, 38, 50, 51, 52, 53, 74, 75, 76, 88, 89, 103, 105],
+    galar: [52, 77, 78, 79, 80, 83, 110, 122, 144, 145, 146, 199, 222, 263, 264, 554, 555, 562, 618],
+    hisui: [58, 59, 100, 101, 157, 211, 215, 503, 549, 550, 570, 571, 628, 705, 706, 713, 724]
+  };
+
   try {
-    // Récupérer la liste de toutes les formes Pokémon depuis l'API
+    let processedCount = 0;
+    let totalToProcess = megaPokemonIds.length;
+    
+    // Ajouter les formes régionales au total
+    Object.values(regionalForms).forEach(ids => totalToProcess += ids.length);
+    
+    // Récupérer les Pokémon Mega
+    const megaBatch = 5;
+    for (let i = 0; i < megaPokemonIds.length; i += megaBatch) {
+      const batch = megaPokemonIds.slice(i, i + megaBatch);
+      const megaPromises = batch.map(async (id) => {
+        const megaForms = [];
+        try {
+          // Récupérer le Pokémon de base
+          const pokemonResponse = await axios.get(`${POKEAPI_BASE_URL}/pokemon/${id}`);
+          const basePokemon = pokemonResponse.data;
+          
+          // Récupérer les informations d'espèce
+          const speciesResponse = await axios.get(basePokemon.species.url);
+          const speciesData = speciesResponse.data;
+          
+          // Obtenir le nom localisé
+          let baseName = basePokemon.name;
+          const nameEntry = speciesData.names?.find((n: any) => n.language.name === language);
+          if (nameEntry) {
+            baseName = nameEntry.name;
+          }
+          
+          // Chercher les formes Mega possibles
+          const megaVariants = ['mega', 'mega-x', 'mega-y'];
+          
+          for (const variant of megaVariants) {
+            try {
+              const megaName = `${basePokemon.name}-${variant}`;
+              const megaResponse = await axios.get(`${POKEAPI_BASE_URL}/pokemon/${megaName}`);
+              const megaData = megaResponse.data;
+              
+              let displayName = baseName;
+              if (variant === 'mega-x') {
+                displayName += ' (Mega X)';
+              } else if (variant === 'mega-y') {
+                displayName += ' (Mega Y)';
+              } else {
+                displayName += ' (Mega)';
+              }
+              
+              megaForms.push({
+                id: megaData.id,
+                name: displayName,
+                sprite: megaData.sprites?.other?.['official-artwork']?.front_default || megaData.sprites?.front_default,
+                types: megaData.types.map((type: any) => type.type.name),
+              });
+            } catch (error) {
+              // Cette forme Mega n'existe pas, continuer
+            }
+          }
+        } catch (error) {
+          console.warn(`Erreur lors du chargement des formes Mega pour ${id}:`, error);
+        }
+        return megaForms;
+      });
+      
+      try {
+        const results = await Promise.allSettled(megaPromises);
+        results.forEach(result => {
+          if (result.status === 'fulfilled') {
+            specialForms.push(...result.value);
+          }
+        });
+        
+        processedCount += batch.length;
+        if (onProgress) {
+          onProgress((processedCount / totalToProcess) * 100);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`Erreur batch Mega ${i}:`, error);
+      }
+    }
+    
+    // Récupérer les formes régionales
+    for (const [region, ids] of Object.entries(regionalForms)) {
+      const regionBatch = 5;
+      for (let i = 0; i < ids.length; i += regionBatch) {
+        const batch = ids.slice(i, i + regionBatch);
+        const regionalPromises = batch.map(async (id) => {
+          try {
+            const regionalName = `${id}-${region}`;
+            const regionalResponse = await axios.get(`${POKEAPI_BASE_URL}/pokemon/${regionalName}`);
+            const regionalData = regionalResponse.data;
+            
+            // Obtenir le nom localisé
+            const speciesResponse = await axios.get(regionalData.species.url);
+            const speciesData = speciesResponse.data;
+            
+            let displayName = regionalData.name;
+            const nameEntry = speciesData.names?.find((n: any) => n.language.name === language);
+            if (nameEntry) {
+              displayName = nameEntry.name;
+            }
+            
+            // Ajouter le suffixe régional
+            const regionSuffix = region.charAt(0).toUpperCase() + region.slice(1);
+            displayName += ` (${regionSuffix})`;
+            
+            return {
+              id: regionalData.id,
+              name: displayName,
+              sprite: regionalData.sprites?.other?.['official-artwork']?.front_default || regionalData.sprites?.front_default,
+              types: regionalData.types.map((type: any) => type.type.name),
+            };
+          } catch (error) {
+            console.warn(`Erreur forme régionale ${region} ${id}:`, error);
+            return null;
+          }
+        });
+        
+        try {
+          const results = await Promise.allSettled(regionalPromises);
+          results.forEach(result => {
+            if (result.status === 'fulfilled' && result.value) {
+              specialForms.push(result.value);
+            }
+          });
+          
+          processedCount += batch.length;
+          if (onProgress) {
+            onProgress((processedCount / totalToProcess) * 100);
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error(`Erreur batch régional ${region} ${i}:`, error);
+        }
+      }
+    }
+
+    // Récupérer aussi les formes Gmax via l'API des formes
     const formsResponse = await axios.get(`${POKEAPI_BASE_URL}/pokemon-form?limit=2000`);
     const allForms = formsResponse.data.results;
     
-    // Filtrer uniquement les formes spéciales demandées
-    const specialFormUrls = allForms.filter((form: any) => {
+    const gmaxForms = allForms.filter((form: any) => {
       const name = form.name.toLowerCase();
-      
-      // Exclure les faux positifs
-      if (name.includes('meganium') || name.includes('yanmega') || 
-          name.includes('totem-alola') || name.includes('alola-cap')) {
-        return false;
-      }
-      
-      return (name.includes('mega-') && !name.includes('meganium')) || 
-             (name.includes('alola') && !name.includes('totem-alola') && !name.includes('alola-cap')) || 
-             name.includes('galar') || 
-             name.includes('hisui') || 
-             name.includes('paldea') ||
-             name.includes('gmax') ||
-             name.includes('gigantamax');
+      return name.includes('gmax') || name.includes('gigantamax');
     });
 
-    const batchSize = 10;
-    let processed = 0;
-    
-    for (let i = 0; i < specialFormUrls.length; i += batchSize) {
-      const batch = specialFormUrls.slice(i, i + batchSize);
-      const batchPromises = batch.map(async (form: any) => {
+    const gmaxBatch = 5;
+    for (let i = 0; i < gmaxForms.length; i += gmaxBatch) {
+      const batch = gmaxForms.slice(i, i + gmaxBatch);
+      const gmaxPromises = batch.map(async (form: any) => {
         try {
           const formResponse = await axios.get(form.url);
           const formData = formResponse.data;
           
-          // Récupérer les données du Pokémon associé
           const pokemonResponse = await axios.get(formData.pokemon.url);
           const pokemonData = pokemonResponse.data;
           
-          let formName = formData.form_name || pokemonData.name;
+          // Obtenir le nom localisé
+          const speciesResponse = await axios.get(pokemonData.species.url);
+          const speciesData = speciesResponse.data;
           
-          // Déterminer le type de forme pour l'affichage
-          const formType = form.name.toLowerCase();
-          let formSuffix = '';
-          
-          if (formType.includes('mega')) {
-            formSuffix = 'Mega';
-          } else if (formType.includes('alola')) {
-            formSuffix = 'Alola';
-          } else if (formType.includes('galar')) {
-            formSuffix = 'Galar';
-          } else if (formType.includes('hisui')) {
-            formSuffix = 'Hisui';
-          } else if (formType.includes('paldea')) {
-            formSuffix = 'Paldea';
-          } else if (formType.includes('gmax') || formType.includes('gigantamax')) {
-            formSuffix = 'Gmax';
+          let displayName = pokemonData.name;
+          const nameEntry = speciesData.names?.find((n: any) => n.language.name === language);
+          if (nameEntry) {
+            displayName = nameEntry.name;
           }
           
-          // Toujours récupérer le nom localisé depuis l'espèce
-          try {
-            const speciesResponse = await axios.get(pokemonData.species.url);
-            const nameEntry = speciesResponse.data.names.find((n: any) => n.language.name === language);
-            if (nameEntry) {
-              formName = nameEntry.name;
-            }
-          } catch (e) {
-            console.warn(`Pas de nom localisé pour ${formData.form_name}`);
-          }
+          displayName += ' (Gmax)';
           
-          // Ajouter le suffixe de forme
-          if (formSuffix) {
-            formName += ` (${formSuffix})`;
-          }
-
           return {
             id: pokemonData.id,
-            name: formName,
+            name: displayName,
             sprite: formData.sprites?.front_default || pokemonData.sprites?.other?.['official-artwork']?.front_default || pokemonData.sprites?.front_default,
             types: pokemonData.types.map((type: any) => type.type.name),
           };
         } catch (error) {
-          console.warn(`Erreur lors du chargement de la forme ${form.name}:`, error);
+          console.warn(`Erreur forme Gmax ${form.name}:`, error);
           return null;
         }
       });
       
       try {
-        const results = await Promise.allSettled(batchPromises);
-        
-        for (const result of results) {
+        const results = await Promise.allSettled(gmaxPromises);
+        results.forEach(result => {
           if (result.status === 'fulfilled' && result.value) {
             specialForms.push(result.value);
           }
-        }
+        });
         
-        processed += batch.length;
-        if (onProgress) {
-          onProgress((processed / specialFormUrls.length) * 100);
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
-        console.error(`Erreur batch formes spéciales ${i}:`, error);
+        console.error(`Erreur batch Gmax ${i}:`, error);
       }
     }
     
