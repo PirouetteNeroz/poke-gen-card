@@ -220,61 +220,102 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
       }
     }
 
-    // Récupérer aussi les formes Gmax via l'API des formes
+    // Récupérer aussi les formes régionales et Gmax via l'API des formes (comme avant)
     const formsResponse = await axios.get(`${POKEAPI_BASE_URL}/pokemon-form?limit=2000`);
     const allForms = formsResponse.data.results;
     
-    const gmaxForms = allForms.filter((form: any) => {
+    // Filtrer les formes spéciales via l'API (comme l'ancienne méthode)
+    const apiSpecialForms = allForms.filter((form: any) => {
       const name = form.name.toLowerCase();
-      return name.includes('gmax') || name.includes('gigantamax');
+      
+      // Exclure les faux positifs
+      if (name.includes('meganium') || name.includes('yanmega') || 
+          name.includes('totem-alola') || name.includes('alola-cap')) {
+        return false;
+      }
+      
+      return (name.includes('alola') && !name.includes('totem-alola') && !name.includes('alola-cap')) || 
+             name.includes('galar') || 
+             name.includes('hisui') || 
+             name.includes('paldea') ||
+             name.includes('gmax') ||
+             name.includes('gigantamax');
     });
 
-    const gmaxBatch = 5;
-    for (let i = 0; i < gmaxForms.length; i += gmaxBatch) {
-      const batch = gmaxForms.slice(i, i + gmaxBatch);
-      const gmaxPromises = batch.map(async (form: any) => {
+    const apiBatch = 10;
+    for (let i = 0; i < apiSpecialForms.length; i += apiBatch) {
+      const batch = apiSpecialForms.slice(i, i + apiBatch);
+      const batchPromises = batch.map(async (form: any) => {
         try {
           const formResponse = await axios.get(form.url);
           const formData = formResponse.data;
           
+          // Récupérer les données du Pokémon associé
           const pokemonResponse = await axios.get(formData.pokemon.url);
           const pokemonData = pokemonResponse.data;
           
-          // Obtenir le nom localisé
-          const speciesResponse = await axios.get(pokemonData.species.url);
-          const speciesData = speciesResponse.data;
+          let formName = formData.form_name || pokemonData.name;
           
-          let displayName = pokemonData.name;
-          const nameEntry = speciesData.names?.find((n: any) => n.language.name === language);
-          if (nameEntry) {
-            displayName = nameEntry.name;
+          // Déterminer le type de forme pour l'affichage
+          const formType = form.name.toLowerCase();
+          let formSuffix = '';
+          
+          if (formType.includes('alola')) {
+            formSuffix = 'Alola';
+          } else if (formType.includes('galar')) {
+            formSuffix = 'Galar';
+          } else if (formType.includes('hisui')) {
+            formSuffix = 'Hisui';
+          } else if (formType.includes('paldea')) {
+            formSuffix = 'Paldea';
+          } else if (formType.includes('gmax') || formType.includes('gigantamax')) {
+            formSuffix = 'Gmax';
           }
           
-          displayName += ' (Gmax)';
+          // Toujours récupérer le nom localisé depuis l'espèce
+          try {
+            const speciesResponse = await axios.get(pokemonData.species.url);
+            const nameEntry = speciesResponse.data.names.find((n: any) => n.language.name === language);
+            if (nameEntry) {
+              formName = nameEntry.name;
+            }
+          } catch (e) {
+            console.warn(`Pas de nom localisé pour ${formData.form_name}`);
+          }
           
+          // Ajouter le suffixe de forme
+          if (formSuffix) {
+            formName += ` (${formSuffix})`;
+          }
+
           return {
             id: pokemonData.id,
-            name: displayName,
+            name: formName,
             sprite: formData.sprites?.front_default || pokemonData.sprites?.other?.['official-artwork']?.front_default || pokemonData.sprites?.front_default,
             types: pokemonData.types.map((type: any) => type.type.name),
           };
         } catch (error) {
-          console.warn(`Erreur forme Gmax ${form.name}:`, error);
+          console.warn(`Erreur lors du chargement de la forme ${form.name}:`, error);
           return null;
         }
       });
       
       try {
-        const results = await Promise.allSettled(gmaxPromises);
-        results.forEach(result => {
-          if (result.status === 'fulfilled' && result.value) {
-            specialForms.push(result.value);
-          }
-        });
+        const results = await Promise.allSettled(batchPromises);
         
-        await new Promise(resolve => setTimeout(resolve, 100));
+        for (const result of results) {
+          if (result.status === 'fulfilled' && result.value) {
+            // Vérifier qu'on n'a pas déjà cette forme (pour éviter les doublons avec les Mega)
+            const existingForm = specialForms.find(f => f.id === result.value.id && f.name === result.value.name);
+            if (!existingForm) {
+              specialForms.push(result.value);
+            }
+          }
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
       } catch (error) {
-        console.error(`Erreur batch Gmax ${i}:`, error);
+        console.error(`Erreur batch formes API ${i}:`, error);
       }
     }
     

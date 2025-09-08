@@ -207,17 +207,31 @@ export const generatePDF = async (
     pdf.setLineWidth(1.5);
     pdf.rect(contentX, contentY, contentWidth, contentHeight);
     
-    // Badge génération élégant en haut à gauche
-    const pokemonGen = getPokemonGeneration(pokemon.id);
+    // Badge génération ou forme spéciale en haut à gauche
+    const getFormType = (pokemonName: string): string => {
+      if (pokemonName.includes('(Mega X)')) return 'MEGA X';
+      if (pokemonName.includes('(Mega Y)')) return 'MEGA Y'; 
+      if (pokemonName.includes('(Mega)')) return 'MEGA';
+      if (pokemonName.includes('(Alola)')) return 'ALOLA';
+      if (pokemonName.includes('(Galar)')) return 'GALAR';
+      if (pokemonName.includes('(Hisui)')) return 'HISUI';
+      if (pokemonName.includes('(Paldea)')) return 'PALDEA';
+      if (pokemonName.includes('(Gmax)')) return 'GMAX';
+      
+      const pokemonGen = getPokemonGeneration(pokemon.id);
+      return `GEN ${pokemonGen}`;
+    };
+    
+    const formType = getFormType(pokemon.name);
     pdf.setFillColor(0, 0, 0);
     const badgeWidth = 18;
     const badgeHeight = 8;
     pdf.roundedRect(contentX + 2, contentY + 3, badgeWidth, badgeHeight, 2, 2, 'F');
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(7);
+    pdf.setFontSize(6);
     pdf.setTextColor(255, 255, 255);
-    pdf.text(`GEN ${pokemonGen}`, contentX + 2 + badgeWidth / 2, contentY + 8.5, { align: 'center' });
+    pdf.text(formType, contentX + 2 + badgeWidth / 2, contentY + 8.5, { align: 'center' });
     
     // NOM DU POKEMON avec style amélioré
     pdf.setFont('helvetica', 'bold');
