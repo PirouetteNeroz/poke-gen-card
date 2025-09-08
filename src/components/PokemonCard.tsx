@@ -11,6 +11,19 @@ interface PokemonCardProps {
 }
 
 export const PokemonCard = ({ pokemon, language }: PokemonCardProps) => {
+  // Extraire le type de forme spéciale du nom
+  const getSpecialFormType = (name: string): string | null => {
+    const match = name.match(/\((Mega|Alola|Galar|Hisui|Paldea|Gmax)\)/);
+    return match ? match[1] : null;
+  };
+
+  // Nettoyer le nom en retirant le suffixe de forme
+  const getCleanName = (name: string): string => {
+    return name.replace(/\s*\((Mega|Alola|Galar|Hisui|Paldea|Gmax)\)/, '');
+  };
+
+  const specialForm = getSpecialFormType(pokemon.name);
+  const cleanName = getCleanName(pokemon.name);
   return (
     <Card className="w-full h-48 bg-gradient-card shadow-card border-border/50 relative overflow-hidden group hover:shadow-pokemon transition-all duration-300 hover:scale-105">
       {/* Card background pattern */}
@@ -22,6 +35,13 @@ export const PokemonCard = ({ pokemon, language }: PokemonCardProps) => {
         <div className="absolute top-2 right-2 bg-pokemon-red text-white text-xs font-bold px-2 py-1 rounded-full">
           #{pokemon.id.toString().padStart(3, '0')}
         </div>
+        
+        {/* Special form badge */}
+        {specialForm && (
+          <div className="absolute top-2 left-2 bg-pokemon-blue text-white text-xs font-bold px-2 py-1 rounded-full">
+            {specialForm}
+          </div>
+        )}
         
         {/* Pokemon image */}
         <div className="flex-1 flex items-center justify-center">
@@ -38,7 +58,7 @@ export const PokemonCard = ({ pokemon, language }: PokemonCardProps) => {
         {/* Pokemon name */}
         <div className="text-center">
           <h3 className="font-bold text-foreground capitalize text-sm mb-1">
-            {pokemon.name}
+            {cleanName}
           </h3>
           
           {/* Types */}
