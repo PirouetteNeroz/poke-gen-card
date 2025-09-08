@@ -32,45 +32,80 @@ export const generateChecklistPDF = async (
   let currentY = margin + 20; // Espace pour le titre
   let pageNumber = 1;
   
+  // Fonction pour obtenir le titre selon la génération
+  const getTitle = (gen: string, lang: string) => {
+    if (gen === 'all') {
+      const allTitles = {
+        fr: 'Checklist Pokédex - Toutes générations',
+        en: 'Pokédex Checklist - All generations',
+        ja: 'ポケモン図鑑チェックリスト - 全世代',
+        de: 'Pokédex-Checkliste - Alle Generationen',
+        es: 'Lista Pokédex - Todas las generaciones',
+        it: 'Checklist Pokédx - Tutte le generazioni'
+      };
+      return allTitles[lang as keyof typeof allTitles] || allTitles.fr;
+    } else if (gen === 'special') {
+      const specialTitles = {
+        fr: 'Checklist Pokédex - Formes spéciales (Mega, Alola, Galar, Hisui, Paldea, Gmax)',
+        en: 'Pokédex Checklist - Special forms (Mega, Alola, Galar, Hisui, Paldea, Gmax)',
+        ja: 'ポケモン図鑑チェックリスト - 特殊フォーム (メガ、アローラ、ガラル、ヒスイ、パルデア、キョダイマックス)',
+        de: 'Pokédex-Checkliste - Spezialformen (Mega, Alola, Galar, Hisui, Paldea, Gmax)',
+        es: 'Lista Pokédex - Formas especiales (Mega, Alola, Galar, Hisui, Paldea, Gmax)',
+        it: 'Checklist Pokédx - Forme speciali (Mega, Alola, Galar, Hisui, Paldea, Gmax)'
+      };
+      return specialTitles[lang as keyof typeof specialTitles] || specialTitles.fr;
+    } else {
+      const genTitles = {
+        fr: `Checklist Pokédex - Génération ${gen}`,
+        en: `Pokédex Checklist - Generation ${gen}`,
+        ja: `ポケモン図鑑チェックリスト - 第${gen}世代`,
+        de: `Pokédx-Checkliste - Generation ${gen}`,
+        es: `Lista Pokédx - Generación ${gen}`,
+        it: `Checklist Pokédx - Generazione ${gen}`
+      };
+      return genTitles[lang as keyof typeof genTitles] || genTitles.fr;
+    }
+  };
+
   // Traductions pour la checklist
   const translations = {
     fr: {
-      title: generation === 'all' ? 'Checklist Pokédex - Toutes générations' : `Checklist Pokédex - Génération ${generation}`,
+      title: getTitle(generation, language),
       numberCol: 'N°',
       nameCol: 'Nom du Pokémon',
       checkCol: '✓',
       total: 'Total'
     },
     en: {
-      title: generation === 'all' ? 'Pokédex Checklist - All generations' : `Pokédex Checklist - Generation ${generation}`,
+      title: getTitle(generation, language),
       numberCol: 'No.',
       nameCol: 'Pokémon Name',
       checkCol: '✓',
       total: 'Total'
     },
     ja: {
-      title: generation === 'all' ? 'ポケモン図鑑チェックリスト - 全世代' : `ポケモン図鑑チェックリスト - 第${generation}世代`,
+      title: getTitle(generation, language),
       numberCol: '番号',
       nameCol: 'ポケモン名',
       checkCol: '✓',
       total: '合計'
     },
     de: {
-      title: generation === 'all' ? 'Pokédex-Checkliste - Alle Generationen' : `Pokédex-Checkliste - Generation ${generation}`,
+      title: getTitle(generation, language),
       numberCol: 'Nr.',
       nameCol: 'Pokémon-Name',
       checkCol: '✓',
       total: 'Gesamt'
     },
     es: {
-      title: generation === 'all' ? 'Lista Pokédex - Todas las generaciones' : `Lista Pokédex - Generación ${generation}`,
+      title: getTitle(generation, language),
       numberCol: 'N°',
       nameCol: 'Nombre del Pokémon',
       checkCol: '✓',
       total: 'Total'
     },
     it: {
-      title: generation === 'all' ? 'Checklist Pokédex - Tutte le generazioni' : `Checklist Pokédex - Generazione ${generation}`,
+      title: getTitle(generation, language),
       numberCol: 'N°',
       nameCol: 'Nome del Pokémon',
       checkCol: '✓',
