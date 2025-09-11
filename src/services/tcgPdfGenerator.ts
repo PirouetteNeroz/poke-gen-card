@@ -207,8 +207,10 @@ const generateSinglePDF = async (
   };
   
   // Ajouter la page de titre seulement pour le premier PDF
+  let hasInitialPage = false;
   if (pdfNumber === 1) {
     addTitlePage();
+    hasInitialPage = true;
   }
   
   // Fonction pour nettoyer la mémoire
@@ -268,8 +270,13 @@ const generateSinglePDF = async (
         }
         
         if (cardCount === 0) {
-          pdf.addPage();
-          currentPage++;
+          // Pour le premier PDF, on a déjà une page de titre, pas besoin d'ajouter une page
+          // Pour les autres PDFs, on ajoute une page pour commencer les cartes
+          if (!hasInitialPage) {
+            pdf.addPage();
+            currentPage++;
+          }
+          hasInitialPage = false; // Reset après la première utilisation
         }
         
         const x = marginX + col * cardWidth;
