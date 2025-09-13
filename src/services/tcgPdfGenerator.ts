@@ -176,7 +176,7 @@ const generateSinglePDF = async (
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
     pdf.setTextColor(0, 0, 0);
-    const title = totalPdfs > 1 ? `${setName} (Partie ${pdfNumber}/${totalPdfs})` : setName;
+    const title = setName;
     pdf.text(title, pageWidth / 2, pageHeight / 2 - 10, { align: 'center' });
     
     pdf.setFont('helvetica', 'normal');
@@ -412,29 +412,29 @@ const generateSinglePDF = async (
                   const reverseBadgeImage = await loadImageWithTimeout(reverseBadgeUrl);
                   
                   if (reverseBadgeImage) {
-                    const badgeSize = 15; // Taille du badge réduite
-                    const badgeX = imageX + imageWidth - badgeSize - 3; // Position en haut à droite
-                    const badgeY = imageY + 3;
+                    const badgeSize = 20; // Taille du badge pour être visible au centre
+                    const badgeX = imageX + (imageWidth / 2) - (badgeSize / 2); // Position au centre
+                    const badgeY = imageY + (imageHeight / 2) - (badgeSize / 2);
                     
                     pdf.addImage(reverseBadgeImage, 'PNG', badgeX, badgeY, badgeSize, badgeSize);
                   } else {
                     // Fallback si l'image ne se charge pas
                     pdf.setFillColor(138, 43, 226, 0.9);
-                    pdf.roundedRect(imageX + imageWidth - 18, imageY + 3, 15, 7, 2, 2, 'F');
+                    pdf.roundedRect(imageX + (imageWidth / 2) - 7.5, imageY + (imageHeight / 2) - 3.5, 15, 7, 2, 2, 'F');
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(6);
                     pdf.setTextColor(255, 255, 255);
-                    pdf.text('R', imageX + imageWidth - 10.5, imageY + 8, { align: 'center' });
+                    pdf.text('R', imageX + (imageWidth / 2), imageY + (imageHeight / 2) + 1, { align: 'center' });
                   }
                 } catch (error) {
                   console.log('Could not load reverse badge image, using fallback');
                   // Fallback si erreur
                   pdf.setFillColor(138, 43, 226, 0.9);
-                  pdf.roundedRect(imageX + imageWidth - 18, imageY + 3, 15, 7, 2, 2, 'F');
+                  pdf.roundedRect(imageX + (imageWidth / 2) - 7.5, imageY + (imageHeight / 2) - 3.5, 15, 7, 2, 2, 'F');
                   pdf.setFont('helvetica', 'bold');
                   pdf.setFontSize(6);
                   pdf.setTextColor(255, 255, 255);
-                  pdf.text('R', imageX + imageWidth - 10.5, imageY + 8, { align: 'center' });
+                  pdf.text('R', imageX + (imageWidth / 2), imageY + (imageHeight / 2) + 1, { align: 'center' });
                 }
               }
 
