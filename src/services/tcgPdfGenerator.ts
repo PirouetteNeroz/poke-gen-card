@@ -372,7 +372,7 @@ const generateSinglePDF = async (
             pdf.text('Pokémon', imageX + imageSize / 2, imageY + imageSize / 2, { align: 'center' });
           }
           
-          const cardNumber = `${card.number}/${cardsList.length}`;
+          const cardNumber = `${card.number}/${totalCards}`;
           const numberY = imageY + imageSize + 8;
           
           pdf.setFont('helvetica', 'bold');
