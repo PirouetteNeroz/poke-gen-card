@@ -171,7 +171,7 @@ const generateSinglePDF = async (
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(28);
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Collection TCG', pageWidth / 2, pageHeight / 2 - 30, { align: 'center' });
+    pdf.text('TCG Collection', pageWidth / 2, pageHeight / 2 - 30, { align: 'center' });
     
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
@@ -182,13 +182,11 @@ const generateSinglePDF = async (
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(16);
     pdf.setTextColor(60, 60, 60);
-    pdf.text('Cartes de collection à découper', pageWidth / 2, pageHeight / 2 + 10, { align: 'center' });
+    pdf.text('Collection cards to cut out', pageWidth / 2, pageHeight / 2 + 10, { align: 'center' });
     
     pdf.setFontSize(12);
     pdf.setTextColor(100, 100, 100);
-    const cardInfo = totalPdfs > 1 ? 
-      `${cardsList.length} cartes (${globalStartIndex + 1}-${globalStartIndex + cardsList.length} sur ${totalCards})` :
-      `${cardsList.length} cartes incluses`;
+    const cardInfo = `${totalCards} cards included`;
     pdf.text(cardInfo, pageWidth / 2, pageHeight / 2 + 25, { align: 'center' });
     
     pdf.setDrawColor(0, 0, 0);
@@ -202,8 +200,8 @@ const generateSinglePDF = async (
     
     pdf.setFontSize(10);
     pdf.setTextColor(120, 120, 120);
-    const currentDate = new Date().toLocaleDateString('fr-FR');
-    pdf.text(`Généré le ${currentDate}`, pageWidth / 2, pageHeight - 25, { align: 'center' });
+    const currentDate = new Date().toLocaleDateString('en-US');
+    pdf.text(`Generated on ${currentDate}`, pageWidth / 2, pageHeight - 25, { align: 'center' });
   };
   
   // Ajouter la page de titre seulement pour le premier PDF
