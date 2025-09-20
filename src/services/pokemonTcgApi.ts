@@ -75,7 +75,13 @@ class PokemonTCGAPI {
   async getCards(setId: string): Promise<PokemonCard[]> {
     try {
       const response = await this.makeRequest<PokemonCard>(`/cards?q=set.id:${setId}&orderBy=number`);
-      return response.data;
+      // Sort cards by number as integers to ensure proper numerical order
+      const sortedCards = response.data.sort((a, b) => {
+        const numA = parseInt(a.number) || 0;
+        const numB = parseInt(b.number) || 0;
+        return numA - numB;
+      });
+      return sortedCards;
     } catch (error) {
       console.error('Erreur lors de la récupération des cartes:', error);
       throw error;
