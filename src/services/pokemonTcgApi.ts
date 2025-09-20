@@ -75,10 +75,30 @@ class PokemonTCGAPI {
   async getCards(setId: string): Promise<PokemonCard[]> {
     try {
       const response = await this.makeRequest<PokemonCard>(`/cards?q=set.id:${setId}&orderBy=number`);
-      // Sort cards by number as integers to ensure proper numerical order
+      // Sort cards by number handling complex formats (TG01, etc.)
       const sortedCards = response.data.sort((a, b) => {
-        const numA = parseInt(a.number) || 0;
-        const numB = parseInt(b.number) || 0;
+        const extractNumber = (cardNumber: string) => {
+          // Extract numeric part from card number
+          const match = cardNumber.match(/(\d+)/);
+          return match ? parseInt(match[1]) : 0;
+        };
+        
+        const extractPrefix = (cardNumber: string) => {
+          // Extract non-numeric prefix (like "TG", "SWSH", etc.)
+          const match = cardNumber.match(/([A-Za-z]+)/);
+          return match ? match[1] : '';
+        };
+        
+        const prefixA = extractPrefix(a.number);
+        const prefixB = extractPrefix(b.number);
+        const numA = extractNumber(a.number);
+        const numB = extractNumber(b.number);
+        
+        // First sort by prefix, then by number
+        if (prefixA !== prefixB) {
+          return prefixA.localeCompare(prefixB);
+        }
+        
         return numA - numB;
       });
       return sortedCards;
