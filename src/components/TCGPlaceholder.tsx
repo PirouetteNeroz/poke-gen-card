@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Download, Loader2, FileText, Search, Sparkles, Key, AlertCircle } from "lucide-react";
 import { generateTCGPDF } from "@/services/tcgPdfGenerator";
 import { pokemonTCGAPI, type PokemonSet, type PokemonCard } from "@/services/pokemonTcgApi";
-import { tcgdxAPI, type TCGdxSeries, type TCGdxSet, type TCGdxCard } from "@/services/tcgdxApi";
+import { tcgdexAPI, type TCGdexSeries, type TCGdexSet, type TCGdexCard } from "@/services/tcgdexApi";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
 interface PokemonSeries {
@@ -22,15 +22,15 @@ const TCGPlaceholder = () => {
   const [selectedSet, setSelectedSet] = useState<string>("");
   const [selectedSeries, setSelectedSeries] = useState<string>("");
   const [setType, setSetType] = useState<"complete" | "master">("complete");
-  const [apiService, setApiService] = useState<"pokemon-tcg" | "tcgdx">("pokemon-tcg");
+  const [apiService, setApiService] = useState<"pokemon-tcg" | "tcgdex">("pokemon-tcg");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("en");
   const [sets, setSets] = useState<PokemonSet[]>([]);
-  const [tcgdxSets, setTcgdxSets] = useState<TCGdxSet[]>([]);
+  const [tcgdexSets, setTcgdexSets] = useState<TCGdexSet[]>([]);
   const [pokemonSeries, setPokemonSeries] = useState<PokemonSeries[]>([]);
-  const [tcgdxSeries, setTcgdxSeries] = useState<TCGdxSeries[]>([]);
-  const [currentTcgdxSets, setCurrentTcgdxSets] = useState<TCGdxSet[]>([]);
+  const [tcgdexSeries, setTcgdexSeries] = useState<TCGdexSeries[]>([]);
+  const [currentTcgdexSets, setCurrentTcgdexSets] = useState<TCGdexSet[]>([]);
   const [tcgCards, setTcgCards] = useState<PokemonCard[]>([]);
-  const [tcgdxCards, setTcgdxCards] = useState<TCGdxCard[]>([]);
+  const [tcgdexCards, setTcgdexCards] = useState<TCGdexCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<string>("");
@@ -54,15 +54,15 @@ const TCGPlaceholder = () => {
     loadSets();
   }, [apiService, selectedLanguage]);
 
-  // Load sets for selected TCGdx series
+  // Load sets for selected TCGdex series
   useEffect(() => {
-    if (apiService === "tcgdx" && selectedSeries && tcgdxSeries.length > 0) {
-      const series = tcgdxSeries.find(s => s.name === selectedSeries);
+    if (apiService === "tcgdex" && selectedSeries && tcgdexSeries.length > 0) {
+      const series = tcgdexSeries.find(s => s.name === selectedSeries);
       if (series) {
-        setCurrentTcgdxSets(series.sets);
+        setCurrentTcgdexSets(series.sets);
       }
     }
-  }, [selectedSeries, tcgdxSeries, apiService]);
+  }, [selectedSeries, tcgdexSeries, apiService]);
 
   const handleApiKeySubmit = () => {
     if (!apiKey.trim()) {
@@ -112,7 +112,7 @@ const TCGPlaceholder = () => {
     if (apiService === "pokemon-tcg") {
       await loadPokemonSets();
     } else {
-      await loadTCGdxSets();
+      await loadTCGdexSets();
     }
   };
 
@@ -159,16 +159,16 @@ const TCGPlaceholder = () => {
     }
   };
 
-  const loadTCGdxSets = async () => {
+  const loadTCGdexSets = async () => {
     setIsLoading(true);
     setCurrentStep("Loading TCG series...");
     
     try {
-      let seriesList: TCGdxSeries[];
+      let seriesList: TCGdexSeries[];
       
       // Check cache
-      const cacheKey = `tcgdx-series-cache-${selectedLanguage}`;
-      const timestampKey = `tcgdx-series-timestamp-${selectedLanguage}`;
+      const cacheKey = `tcgdex-series-cache-${selectedLanguage}`;
+      const timestampKey = `tcgdex-series-timestamp-${selectedLanguage}`;
       
       if (isCacheValid(timestampKey)) {
         const cachedSeries = localStorage.getItem(cacheKey);
@@ -181,14 +181,14 @@ const TCGPlaceholder = () => {
       } else {
         // Load from API with retry
         setCurrentStep("Loading from API...");
-        seriesList = await fetchWithRetry(() => tcgdxAPI.getSeries(selectedLanguage), 3);
+        seriesList = await fetchWithRetry(() => tcgdexAPI.getSeries(selectedLanguage), 3);
         
         // Save to cache
         localStorage.setItem(cacheKey, JSON.stringify(seriesList));
         localStorage.setItem(timestampKey, Date.now().toString());
       }
       
-      setTcgdxSeries(seriesList);
+      setTcgdexSeries(seriesList);
       
       setCurrentStep("TCG series loaded!");
       toast.success(`${seriesList.length} TCG series found!`);
@@ -227,7 +227,7 @@ const TCGPlaceholder = () => {
       if (apiService === "pokemon-tcg") {
         await loadPokemonCards();
       } else {
-        await loadTCGdxCards();
+        await loadTCGdexCards();
       }
     } catch (error) {
       console.error("Error loading cards:", error);
@@ -271,11 +271,11 @@ const TCGPlaceholder = () => {
     toast.success(`${cardsList.length} cards loaded for the selected set!`);
   };
 
-  const loadTCGdxCards = async () => {
-    const cacheKey = `tcgdx-cards-cache-${selectedSet}-${selectedLanguage}`;
-    const timestampKey = `tcgdx-cards-timestamp-${selectedSet}-${selectedLanguage}`;
+  const loadTCGdexCards = async () => {
+    const cacheKey = `tcgdex-cards-cache-${selectedSet}-${selectedLanguage}`;
+    const timestampKey = `tcgdex-cards-timestamp-${selectedSet}-${selectedLanguage}`;
     
-    let cardsList: TCGdxCard[];
+    let cardsList: TCGdexCard[];
     
     if (isCacheValid(timestampKey)) {
       const cachedCards = localStorage.getItem(cacheKey);
@@ -290,22 +290,22 @@ const TCGPlaceholder = () => {
       setCurrentStep("Loading cards from API...");
       setProgress(25);
       
-      cardsList = await fetchWithRetry(() => tcgdxAPI.getCards(selectedSet, selectedLanguage), 3);
+      cardsList = await fetchWithRetry(() => tcgdexAPI.getCards(selectedSet, selectedLanguage), 3);
       
       localStorage.setItem(cacheKey, JSON.stringify(cardsList));
       localStorage.setItem(timestampKey, Date.now().toString());
       setProgress(75);
     }
     
-    setTcgdxCards(cardsList);
+    setTcgdexCards(cardsList);
     setProgress(100);
     setCurrentStep("Cards loaded successfully!");
     toast.success(`${cardsList.length} cards loaded for the selected set!`);
   };
 
   const handleGeneratePDF = async (pdfType: "sprites" | "complete" | "master" | "graded") => {
-    const currentCards = apiService === "pokemon-tcg" ? tcgCards : tcgdxCards;
-    const currentSets = apiService === "pokemon-tcg" ? sets : tcgdxSets;
+    const currentCards = apiService === "pokemon-tcg" ? tcgCards : tcgdexCards;
+    const currentSets = apiService === "pokemon-tcg" ? sets : tcgdexSets;
     
     if (currentCards.length === 0) {
       toast.error("Please load cards first");
@@ -350,15 +350,15 @@ const TCGPlaceholder = () => {
             images: pokemonCard.images
           };
         } else {
-          const tcgdxCard = card as TCGdxCard;
-          const setData = getCurrentSets().find(s => s.id === selectedSet) as TCGdxSet;
-          const imageUrl = setData ? tcgdxAPI.getCardImageUrl(tcgdxCard, setData, selectedLanguage) : '';
+          const tcgdexCard = card as TCGdexCard;
+          const setData = getCurrentSets().find(s => s.id === selectedSet) as TCGdexSet;
+          const imageUrl = setData ? tcgdexAPI.getCardImageUrl(tcgdexCard, setData, selectedLanguage) : '';
           
           return {
-            id: tcgdxCard.id,
-            name: tcgdxCard.name,
-            number: tcgdxCard.localId,
-            rarity: tcgdxCard.rarity,
+            id: tcgdexCard.id,
+            name: tcgdexCard.name,
+            number: tcgdexCard.localId,
+            rarity: tcgdexCard.rarity,
             set: {
               name: setData?.name || '',
               series: setData?.serie?.name || ''
@@ -432,25 +432,25 @@ const TCGPlaceholder = () => {
           localStorage.removeItem(`${key}-${set.id}`);
           localStorage.removeItem(`${CACHE_KEYS.CARDS_TIMESTAMP}-${set.id}`);
         });
-        tcgdxSets.forEach(set => {
-          localStorage.removeItem(`tcgdx-cards-cache-${set.id}-${selectedLanguage}`);
-          localStorage.removeItem(`tcgdx-cards-timestamp-${set.id}-${selectedLanguage}`);
+        tcgdexSets.forEach(set => {
+          localStorage.removeItem(`tcgdex-cards-cache-${set.id}-${selectedLanguage}`);
+          localStorage.removeItem(`tcgdex-cards-timestamp-${set.id}-${selectedLanguage}`);
         });
       }
     });
     
-    // Clear TCGdx caches
-    localStorage.removeItem(`tcgdx-series-cache-${selectedLanguage}`);
-    localStorage.removeItem(`tcgdx-series-timestamp-${selectedLanguage}`);
+    // Clear TCGdex caches
+    localStorage.removeItem(`tcgdex-series-cache-${selectedLanguage}`);
+    localStorage.removeItem(`tcgdex-series-timestamp-${selectedLanguage}`);
     
     localStorage.removeItem('pokemon-tcg-api-key');
     setSets([]);
-    setTcgdxSets([]);
+    setTcgdexSets([]);
     setPokemonSeries([]);
-    setTcgdxSeries([]);
-    setCurrentTcgdxSets([]);
+    setTcgdexSeries([]);
+    setCurrentTcgdexSets([]);
     setTcgCards([]);
-    setTcgdxCards([]);
+    setTcgdexCards([]);
     setSelectedSet("");
     setSelectedSeries("");
     setApiKey("");
@@ -459,18 +459,18 @@ const TCGPlaceholder = () => {
   };
 
   const getCurrentSeries = () => {
-    return apiService === "pokemon-tcg" ? pokemonSeries : tcgdxSeries;
+    return apiService === "pokemon-tcg" ? pokemonSeries : tcgdexSeries;
   };
 
   const getCurrentCards = () => {
-    return apiService === "pokemon-tcg" ? tcgCards : tcgdxCards;
+    return apiService === "pokemon-tcg" ? tcgCards : tcgdexCards;
   };
 
   const getCurrentSets = () => {
     if (apiService === "pokemon-tcg") {
       return sets;
     } else {
-      return currentTcgdxSets;
+      return currentTcgdexSets;
     }
   };
 
@@ -490,25 +490,25 @@ const TCGPlaceholder = () => {
               <label className="text-sm font-medium text-foreground">
                 API Service
               </label>
-              <Select value={apiService} onValueChange={(value: "pokemon-tcg" | "tcgdx") => {
+              <Select value={apiService} onValueChange={(value: "pokemon-tcg" | "tcgdex") => {
                 setApiService(value);
                 setSelectedSet("");
                 setSelectedSeries("");
                 setTcgCards([]);
-                setTcgdxCards([]);
-                setCurrentTcgdxSets([]);
+                setTcgdexCards([]);
+                setCurrentTcgdexSets([]);
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select API service" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pokemon-tcg">Pokémon TCG API (English only)</SelectItem>
-                  <SelectItem value="tcgdx">TCGdx API (Multilingual)</SelectItem>
+                  <SelectItem value="tcgdex">TCGdex API (Multilingual)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            {apiService === "tcgdx" && (
+            {apiService === "tcgdex" && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
                   Language
@@ -519,7 +519,7 @@ const TCGPlaceholder = () => {
                     setSelectedLanguage(lang);
                     setSelectedSet("");
                     setSelectedSeries("");
-                    setTcgdxCards([]);
+                    setTcgdexCards([]);
                   }}
                 />
               </div>
@@ -630,7 +630,7 @@ const TCGPlaceholder = () => {
                         .find(series => series.name === selectedSeries)
                         ?.sets.map((set) => (
                           <SelectItem key={set.id} value={set.id}>
-                            {set.name} ({apiService === "pokemon-tcg" ? (set as PokemonSet).total : (set as TCGdxSet).cardCount.total} cards) - {new Date(set.releaseDate).getFullYear()}
+                            {set.name} ({apiService === "pokemon-tcg" ? (set as PokemonSet).total : (set as TCGdexSet).cardCount.total} cards) - {new Date(set.releaseDate).getFullYear()}
                           </SelectItem>
                         ))}
                     </SelectContent>
@@ -773,13 +773,13 @@ const TCGPlaceholder = () => {
               {getCurrentCards().slice(0, 50).map((card) => (
                 <div key={card.id} className="border rounded-lg p-3 bg-card hover:shadow-md transition-shadow">
                   <div className="text-sm font-medium mb-1 truncate">{card.name}</div>
-                  <div className="text-xs text-muted-foreground">#{apiService === "pokemon-tcg" ? (card as PokemonCard).number : (card as TCGdxCard).localId}</div>
+                  <div className="text-xs text-muted-foreground">#{apiService === "pokemon-tcg" ? (card as PokemonCard).number : (card as TCGdexCard).localId}</div>
                   <div className="text-xs text-muted-foreground">{card.rarity}</div>
                   <div className="text-xs text-muted-foreground mt-1">
                     {apiService === "pokemon-tcg" 
                       ? (card as PokemonCard).set.series 
                       : (() => {
-                          const setData = getCurrentSets().find(s => s.id === selectedSet) as TCGdxSet;
+                          const setData = getCurrentSets().find(s => s.id === selectedSet) as TCGdexSet;
                           return setData?.serie?.name || '';
                         })()
                     }
@@ -805,7 +805,7 @@ const TCGPlaceholder = () => {
             <div className="w-12 h-12 bg-pokemon-red rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-6 h-6 text-white" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">{apiService === "pokemon-tcg" ? "Pokémon TCG API" : "TCGdx API"}</h3>
+            <h3 className="font-semibold text-lg mb-2">{apiService === "pokemon-tcg" ? "Pokémon TCG API" : "TCGdex API"}</h3>
             <p className="text-muted-foreground text-sm">
               {apiService === "pokemon-tcg" ? "Official free data" : "Multilingual card data"}
             </p>
