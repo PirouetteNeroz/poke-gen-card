@@ -1,10 +1,10 @@
-interface TCGdxSeries {
+interface TCGdexSeries {
   id: string;
   name: string;
-  sets: TCGdxSet[];
+  sets: TCGdexSet[];
 }
 
-interface TCGdxSet {
+interface TCGdexSet {
   id: string;
   name: string;
   serie: {
@@ -18,10 +18,10 @@ interface TCGdxSet {
   releaseDate: string;
   logo: string;
   symbol: string;
-  cards?: TCGdxCard[];
+  cards?: TCGdexCard[];
 }
 
-interface TCGdxCard {
+interface TCGdexCard {
   id: string;
   name: string;
   localId: string;
@@ -35,7 +35,7 @@ interface TCGdxCard {
   };
 }
 
-class TCGdxAPI {
+class TCGdexAPI {
   private baseURL = 'https://api.tcgdex.net/v2';
   
   private async makeRequest<T>(endpoint: string, language: string = 'en'): Promise<T> {
@@ -48,35 +48,35 @@ class TCGdxAPI {
     });
 
     if (!response.ok) {
-      throw new Error(`TCGdx API Error: ${response.status} ${response.statusText}`);
+      throw new Error(`TCGdex API Error: ${response.status} ${response.statusText}`);
     }
 
     return response.json();
   }
 
-  async getSeries(language: string = 'en'): Promise<TCGdxSeries[]> {
+  async getSeries(language: string = 'en'): Promise<TCGdexSeries[]> {
     try {
-      const series = await this.makeRequest<TCGdxSeries[]>('/series', language);
+      const series = await this.makeRequest<TCGdexSeries[]>('/series', language);
       return Array.isArray(series) ? series : [];
     } catch (error) {
-      console.error('Error fetching series from TCGdx:', error);
+      console.error('Error fetching series from TCGdex:', error);
       throw error;
     }
   }
 
-  async getSeriesSets(seriesId: string, language: string = 'en'): Promise<TCGdxSet[]> {
+  async getSeriesSets(seriesId: string, language: string = 'en'): Promise<TCGdexSet[]> {
     try {
-      const seriesData = await this.makeRequest<TCGdxSeries>(`/series/${seriesId}`, language);
+      const seriesData = await this.makeRequest<TCGdexSeries>(`/series/${seriesId}`, language);
       return seriesData.sets || [];
     } catch (error) {
-      console.error('Error fetching series sets from TCGdx:', error);
+      console.error('Error fetching series sets from TCGdex:', error);
       throw error;
     }
   }
 
-  async getCards(setId: string, language: string = 'en'): Promise<TCGdxCard[]> {
+  async getCards(setId: string, language: string = 'en'): Promise<TCGdexCard[]> {
     try {
-      const setData = await this.makeRequest<TCGdxSet>(`/sets/${setId}`, language);
+      const setData = await this.makeRequest<TCGdexSet>(`/sets/${setId}`, language);
       
       if (!setData.cards) {
         return [];
@@ -109,15 +109,15 @@ class TCGdxAPI {
       
       return sortedCards;
     } catch (error) {
-      console.error('Error fetching cards from TCGdx:', error);
+      console.error('Error fetching cards from TCGdex:', error);
       throw error;
     }
   }
 
-  getCardImageUrl(card: TCGdxCard, setData: TCGdxSet, language: string = 'en'): string {
-    return `https://assets.tcgdx.net/${language}/${setData.serie.id}/${setData.id}/${card.localId}/high.png`;
+  getCardImageUrl(card: TCGdexCard, setData: TCGdexSet, language: string = 'en'): string {
+    return `https://assets.tcgdex.net/${language}/${setData.serie.id}/${setData.id}/${card.localId}/high.png`;
   }
 }
 
-export const tcgdxAPI = new TCGdxAPI();
-export type { TCGdxSeries, TCGdxSet, TCGdxCard };
+export const tcgdexAPI = new TCGdexAPI();
+export type { TCGdexSeries, TCGdexSet, TCGdexCard };
