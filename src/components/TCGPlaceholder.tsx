@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Download, Loader2, FileText, Search, Sparkles, Key, AlertCircle } from "lucide-react";
 import { generateTCGPDF } from "@/services/tcgPdfGenerator";
 import { pokemonTCGAPI, type PokemonSet, type PokemonCard } from "@/services/pokemonTcgApi";
-import { tcgdxAPI, type TCGdxSet, type TCGdxCard } from "@/services/tcgdxApi";
+import { tcgdxAPI, type TCGdxSeries, type TCGdxSet, type TCGdxCard } from "@/services/tcgdxApi";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
 interface PokemonSeries {
@@ -16,10 +16,6 @@ interface PokemonSeries {
   sets: PokemonSet[];
 }
 
-interface TCGdxSeries {
-  name: string;
-  sets: TCGdxSet[];
-}
 
 const TCGPlaceholder = () => {
   const [apiKey, setApiKey] = useState<string>("");
@@ -32,6 +28,7 @@ const TCGPlaceholder = () => {
   const [tcgdxSets, setTcgdxSets] = useState<TCGdxSet[]>([]);
   const [pokemonSeries, setPokemonSeries] = useState<PokemonSeries[]>([]);
   const [tcgdxSeries, setTcgdxSeries] = useState<TCGdxSeries[]>([]);
+  const [currentTcgdxSets, setCurrentTcgdxSets] = useState<TCGdxSet[]>([]);
   const [tcgCards, setTcgCards] = useState<PokemonCard[]>([]);
   const [tcgdxCards, setTcgdxCards] = useState<TCGdxCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +53,16 @@ const TCGPlaceholder = () => {
     }
     loadSets();
   }, [apiService, selectedLanguage]);
+
+  // Load sets for selected TCGdx series
+  useEffect(() => {
+    if (apiService === "tcgdx" && selectedSeries && tcgdxSeries.length > 0) {
+      const series = tcgdxSeries.find(s => s.name === selectedSeries);
+      if (series) {
+        setCurrentTcgdxSets(series.sets);
+      }
+    }
+  }, [selectedSeries, tcgdxSeries, apiService]);
 
   const handleApiKeySubmit = () => {
     if (!apiKey.trim()) {
@@ -94,31 +101,6 @@ const TCGPlaceholder = () => {
     });
   };
 
-  const organizeTCGdxSeries = (sets: TCGdxSet[]) => {
-    const seriesMap = new Map<string, TCGdxSet[]>();
-    
-    sets.forEach(set => {
-      const seriesName = set.serie;
-      
-      if (!seriesMap.has(seriesName)) {
-        seriesMap.set(seriesName, []);
-      }
-      seriesMap.get(seriesName)!.push(set);
-    });
-    
-    // Convertir en tableau et trier par date de sortie
-    const series = Array.from(seriesMap.entries()).map(([name, sets]) => ({
-      name,
-      sets: sets.sort((a, b) => new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime())
-    }));
-    
-    // Trier les séries par la date de sortie du premier set
-    return series.sort((a, b) => {
-      const dateA = new Date(a.sets[0]?.releaseDate || '1999-01-01').getTime();
-      const dateB = new Date(b.sets[0]?.releaseDate || '1999-01-01').getTime();
-      return dateA - dateB;
-    });
-  };
 
   const isCacheValid = (timestampKey: string) => {
     const timestamp = localStorage.getItem(timestampKey);
@@ -179,43 +161,39 @@ const TCGPlaceholder = () => {
 
   const loadTCGdxSets = async () => {
     setIsLoading(true);
-    setCurrentStep("Loading TCG sets...");
+    setCurrentStep("Loading TCG series...");
     
     try {
-      let setsList: TCGdxSet[];
+      let seriesList: TCGdxSeries[];
       
       // Check cache
-      const cacheKey = `tcgdx-sets-cache-${selectedLanguage}`;
-      const timestampKey = `tcgdx-sets-timestamp-${selectedLanguage}`;
+      const cacheKey = `tcgdx-series-cache-${selectedLanguage}`;
+      const timestampKey = `tcgdx-series-timestamp-${selectedLanguage}`;
       
       if (isCacheValid(timestampKey)) {
-        const cachedSets = localStorage.getItem(cacheKey);
-        if (cachedSets) {
-          setsList = JSON.parse(cachedSets);
-          setCurrentStep("Sets loaded from cache...");
+        const cachedSeries = localStorage.getItem(cacheKey);
+        if (cachedSeries) {
+          seriesList = JSON.parse(cachedSeries);
+          setCurrentStep("Series loaded from cache...");
         } else {
           throw new Error("Invalid cache");
         }
       } else {
         // Load from API with retry
         setCurrentStep("Loading from API...");
-        setsList = await fetchWithRetry(() => tcgdxAPI.getSets(selectedLanguage), 3);
+        seriesList = await fetchWithRetry(() => tcgdxAPI.getSeries(selectedLanguage), 3);
         
         // Save to cache
-        localStorage.setItem(cacheKey, JSON.stringify(setsList));
+        localStorage.setItem(cacheKey, JSON.stringify(seriesList));
         localStorage.setItem(timestampKey, Date.now().toString());
       }
       
-      setTcgdxSets(setsList);
+      setTcgdxSeries(seriesList);
       
-      // Organize by series
-      const organizedSeries = organizeTCGdxSeries(setsList);
-      setTcgdxSeries(organizedSeries);
-      
-      setCurrentStep("TCG sets organized by series!");
-      toast.success(`${setsList.length} TCG sets found and organized by series!`);
+      setCurrentStep("TCG series loaded!");
+      toast.success(`${seriesList.length} TCG series found!`);
     } catch (error) {
-      console.error("Error loading TCG sets:", error);
+      console.error("Error loading TCG series:", error);
       toast.error(error instanceof Error ? error.message : "Connection error. Check your internet connection.");
     } finally {
       setIsLoading(false);
@@ -373,18 +351,21 @@ const TCGPlaceholder = () => {
           };
         } else {
           const tcgdxCard = card as TCGdxCard;
+          const setData = getCurrentSets().find(s => s.id === selectedSet) as TCGdxSet;
+          const imageUrl = setData ? tcgdxAPI.getCardImageUrl(tcgdxCard, setData, selectedLanguage) : '';
+          
           return {
             id: tcgdxCard.id,
             name: tcgdxCard.name,
             number: tcgdxCard.localId,
             rarity: tcgdxCard.rarity,
             set: {
-              name: tcgdxCard.set.name,
-              series: tcgdxCard.set.serie
+              name: setData?.name || '',
+              series: setData?.serie?.name || ''
             },
             images: {
-              small: tcgdxCard.image,
-              large: tcgdxCard.image
+              small: imageUrl,
+              large: imageUrl
             }
           };
         }
@@ -459,14 +440,15 @@ const TCGPlaceholder = () => {
     });
     
     // Clear TCGdx caches
-    localStorage.removeItem(`tcgdx-sets-cache-${selectedLanguage}`);
-    localStorage.removeItem(`tcgdx-sets-timestamp-${selectedLanguage}`);
+    localStorage.removeItem(`tcgdx-series-cache-${selectedLanguage}`);
+    localStorage.removeItem(`tcgdx-series-timestamp-${selectedLanguage}`);
     
     localStorage.removeItem('pokemon-tcg-api-key');
     setSets([]);
     setTcgdxSets([]);
     setPokemonSeries([]);
     setTcgdxSeries([]);
+    setCurrentTcgdxSets([]);
     setTcgCards([]);
     setTcgdxCards([]);
     setSelectedSet("");
@@ -485,7 +467,11 @@ const TCGPlaceholder = () => {
   };
 
   const getCurrentSets = () => {
-    return apiService === "pokemon-tcg" ? sets : tcgdxSets;
+    if (apiService === "pokemon-tcg") {
+      return sets;
+    } else {
+      return currentTcgdxSets;
+    }
   };
 
   return (
@@ -510,6 +496,7 @@ const TCGPlaceholder = () => {
                 setSelectedSeries("");
                 setTcgCards([]);
                 setTcgdxCards([]);
+                setCurrentTcgdxSets([]);
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select API service" />
@@ -594,7 +581,7 @@ const TCGPlaceholder = () => {
             {apiService === "pokemon-tcg" ? "Pokémon Sets by Series" : "TCG Sets by Series"}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            {getCurrentSeries().length > 0 ? `${getCurrentSeries().length} series with ${getCurrentSets().length} sets total` : 'Loading sets...'}
+            {getCurrentSeries().length > 0 ? `${getCurrentSeries().length} series with ${getCurrentSets().length} sets total` : 'Loading series...'}
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -788,7 +775,15 @@ const TCGPlaceholder = () => {
                   <div className="text-sm font-medium mb-1 truncate">{card.name}</div>
                   <div className="text-xs text-muted-foreground">#{apiService === "pokemon-tcg" ? (card as PokemonCard).number : (card as TCGdxCard).localId}</div>
                   <div className="text-xs text-muted-foreground">{card.rarity}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{apiService === "pokemon-tcg" ? (card as PokemonCard).set.series : (card as TCGdxCard).set.serie}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {apiService === "pokemon-tcg" 
+                      ? (card as PokemonCard).set.series 
+                      : (() => {
+                          const setData = getCurrentSets().find(s => s.id === selectedSet) as TCGdxSet;
+                          return setData?.serie?.name || '';
+                        })()
+                    }
+                  </div>
                 </div>
               ))}
               {getCurrentCards().length > 50 && (
