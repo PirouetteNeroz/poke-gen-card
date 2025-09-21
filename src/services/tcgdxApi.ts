@@ -66,7 +66,7 @@ class TCGdxAPI {
 
   async getSeriesSets(seriesId: string, language: string = 'en'): Promise<TCGdxSet[]> {
     try {
-      const seriesData = await this.makeRequest<any>(`/series/${seriesId}`, language);
+      const seriesData = await this.makeRequest<TCGdxSeries>(`/series/${seriesId}`, language);
       return seriesData.sets || [];
     } catch (error) {
       console.error('Error fetching series sets from TCGdx:', error);
@@ -76,14 +76,14 @@ class TCGdxAPI {
 
   async getCards(setId: string, language: string = 'en'): Promise<TCGdxCard[]> {
     try {
-      const setData = await this.makeRequest<any>(`/sets/${setId}`, language);
+      const setData = await this.makeRequest<TCGdxSet>(`/sets/${setId}`, language);
       
       if (!setData.cards) {
         return [];
       }
       
       // Sort cards by localId handling complex formats
-      const sortedCards = setData.cards.sort((a: TCGdxCard, b: TCGdxCard) => {
+      const sortedCards = setData.cards.sort((a, b) => {
         const extractNumber = (cardNumber: string) => {
           const match = cardNumber.match(/(\d+)/);
           return match ? parseInt(match[1]) : 0;
