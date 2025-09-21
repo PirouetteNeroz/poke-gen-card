@@ -57,12 +57,24 @@ const TCGPlaceholder = () => {
   // Load sets for selected TCGdx series
   useEffect(() => {
     if (apiService === "tcgdx" && selectedSeries && tcgdxSeries.length > 0) {
-      const series = tcgdxSeries.find(s => s.name === selectedSeries);
-      if (series) {
-        setCurrentTcgdxSets(series.sets);
-      }
+      loadTCGdxSeriesSets();
     }
   }, [selectedSeries, tcgdxSeries, apiService]);
+
+  const loadTCGdxSeriesSets = async () => {
+    if (!selectedSeries) return;
+    
+    const series = tcgdxSeries.find(s => s.name === selectedSeries);
+    if (!series) return;
+
+    try {
+      const sets = await tcgdxAPI.getSeriesSets(series.id, selectedLanguage);
+      setCurrentTcgdxSets(sets);
+    } catch (error) {
+      console.error('Error loading series sets:', error);
+      toast.error('Error loading sets for this series');
+    }
+  };
 
   const handleApiKeySubmit = () => {
     if (!apiKey.trim()) {
