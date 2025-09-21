@@ -36,7 +36,7 @@ interface TCGdxCard {
 }
 
 class TCGdxAPI {
-  private baseURL = 'https://api.tcgdx.net/v2';
+  private baseURL = 'https://api.tcgdex.net/v2';
   
   private async makeRequest<T>(endpoint: string, language: string = 'en'): Promise<T> {
     const url = `${this.baseURL}/${language}${endpoint}`;
