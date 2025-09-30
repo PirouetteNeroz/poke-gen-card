@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -7,140 +7,36 @@ import { GenerationSelector } from "@/components/GenerationSelector";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { PokemonCard } from "@/components/PokemonCard";
 import TCGPlaceholder from "@/components/TCGPlaceholder";
-import { fetchPokemonBatch } from "@/services/pokemonApi";
-import { generatePDF } from "@/services/pdfGenerator";
-import { generateChecklistPDF } from "@/services/checklistPdfGenerator";
-import { toast } from "sonner";
+import { usePokemonData } from "@/hooks/usePokemonData";
 import { Download, Loader2, FileText, Globe, Sparkles, Search } from "lucide-react";
-
-interface Pokemon {
-  id: number;
-  name: string;
-  sprite: string;
-  types: string[];
-}
 
 const Index = () => {
   const [selectedGeneration, setSelectedGeneration] = useState<string>("1");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("fr");
-  const [pokemonList, setPokemonList] = useState<Pokemon[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [currentStep, setCurrentStep] = useState<string>("");
+  
+  const {
+    pokemonList,
+    isLoading,
+    progress,
+    currentStep,
+    loadPokemon,
+    generatePokemonPDF,
+    generateChecklistPokemonPDF,
+  } = usePokemonData();
 
-  const handleGenerateChecklistPDF = async () => {
-    setIsLoading(true);
-    setProgress(0);
-    setCurrentStep("Récupération des données Pokémon...");
-    
-    try {
-      const pokemonData = await fetchPokemonBatch(selectedGeneration, selectedLanguage, (progress) => {
-        if (progress <= 50) {
-          setProgress(progress);
-        }
-      });
-      
-      setCurrentStep("Génération du PDF checklist...");
-      
-      await generateChecklistPDF(
-        pokemonData, 
-        selectedGeneration, 
-        selectedLanguage, 
-        (progress) => {
-          setProgress(50 + (progress * 0.5));
-        }
-      );
-      
-      setProgress(100);
-      toast.success("PDF checklist généré avec succès !", {
-        description: `Checklist de ${pokemonData.length} Pokémon créée.`,
-      });
-    } catch (error) {
-      console.error('Erreur lors de la génération du PDF checklist:', error);
-      toast.error("Erreur lors de la génération du PDF checklist", {
-        description: "Une erreur est survenue lors de la génération du PDF checklist.",
-      });
-    } finally {
-      setIsLoading(false);
-      setProgress(0);
-      setCurrentStep("");
-    }
-  };
+  const handleGenerateChecklistPDF = useCallback(async () => {
+    await generateChecklistPokemonPDF(selectedGeneration, selectedLanguage);
+  }, [selectedGeneration, selectedLanguage, generateChecklistPokemonPDF]);
 
-  const handleGeneratePDF = async () => {
-    setIsLoading(true);
-    setProgress(0);
-    setCurrentStep("Récupération des données Pokémon...");
+  const handleGeneratePDF = useCallback(async () => {
+    await generatePokemonPDF(selectedGeneration, selectedLanguage);
+  }, [selectedGeneration, selectedLanguage, generatePokemonPDF]);
 
-    try {
-      // Fetch Pokemon data
-      const pokemon = await fetchPokemonBatch(
-        selectedGeneration,
-        selectedLanguage,
-        (fetchProgress) => {
-          setProgress(fetchProgress * 0.8); // 80% for data fetching
-        }
-      );
+  const handlePreviewGeneration = useCallback(async () => {
+    await loadPokemon(selectedGeneration, selectedLanguage);
+  }, [selectedGeneration, selectedLanguage, loadPokemon]);
 
-      setPokemonList(pokemon);
-      setCurrentStep("Génération du PDF...");
-
-      // Generate PDF
-      await generatePDF(
-        pokemon,
-        selectedGeneration,
-        selectedLanguage,
-        (pdfProgress) => {
-          setProgress(80 + pdfProgress * 0.2); // 20% for PDF generation
-        }
-      );
-
-      setCurrentStep("Terminé !");
-      setProgress(100);
-      
-      toast.success("PDF généré avec succès !", {
-        description: `${pokemon.length} Pokémon ont été ajoutés au PDF.`,
-      });
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Erreur lors de la génération du PDF", {
-        description: "Veuillez réessayer dans quelques instants.",
-      });
-    } finally {
-      setIsLoading(false);
-      setProgress(0);
-      setCurrentStep("");
-    }
-  };
-
-  const handlePreviewGeneration = async () => {
-    setIsLoading(true);
-    setProgress(0);
-    setCurrentStep("Chargement de l'aperçu...");
-
-    try {
-      const pokemon = await fetchPokemonBatch(
-        selectedGeneration,
-        selectedLanguage,
-        (fetchProgress) => {
-          setProgress(fetchProgress);
-        }
-      );
-
-      setPokemonList(pokemon); // Show all cards for preview
-      setCurrentStep("Aperçu chargé !");
-      setProgress(100);
-      
-      toast.success("Aperçu chargé avec succès !");
-    } catch (error) {
-      console.error("Error loading preview:", error);
-      toast.error("Erreur lors du chargement de l'aperçu");
-    } finally {
-      setIsLoading(false);
-      setProgress(0);
-      setCurrentStep("");
-    }
-  };
+  const pokemonCount = useMemo(() => pokemonList.length, [pokemonList]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -266,7 +162,7 @@ const Index = () => {
                     Aperçu des cartes (9 cartes par page PDF)
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Affichage de {pokemonList.length} Pokémon
+                    Affichage de {pokemonCount} Pokémon
                   </p>
                 </CardHeader>
                 <CardContent>
