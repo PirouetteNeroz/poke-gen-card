@@ -123,6 +123,7 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
     445,  // Garchomp
     448,  // Lucario
     460,  // Abomasnow
+    475,  //gallade
     478,  // Froslass
     // Génération 5
     500,  // Emboar
