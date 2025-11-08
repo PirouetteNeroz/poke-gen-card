@@ -75,19 +75,26 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
     9,    // Blastoise
     15,   // Beedrill
     18,   // Pidgeot
+    36,   // Clefable
     65,   // Alakazam
+    71,   // Victreebel
     80,   // Slowbro
     94,   // Gengar
     115,  // Kangaskhan
+    121,  // Starmie
     127,  // Pinsir
     130,  // Gyarados
     142,  // Aerodactyl
+    149,  // Dragonite
     150,  // Mewtwo (X et Y)
     // Génération 2
+    154,  // Meganium
+    160,  // Feraligatr
     181,  // Ampharos
     208,  // Steelix
     212,  // Scizor
     214,  // Heracross
+    227,  // Skarmory
     229,  // Houndoom
     248,  // Tyranitar
     // Génération 3
@@ -116,10 +123,31 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
     445,  // Garchomp
     448,  // Lucario
     460,  // Abomasnow
+    478,  // Froslass
     // Génération 5
+    500,  // Emboar
+    530,  // Excadrill
     531,  // Audino
+    545,  // Scolipede
+    560,  // Scrafty
+    604,  // Eelektross
+    609,  // Chandelure
     // Génération 6
+    652,  // Chesnaught
+    655,  // Delphox
+    658,  // Greninja
+    668,  // Pyroar
+    670,  // Floette
+    687,  // Malamar
+    689,  // Barbaracle
+    691,  // Dragalge
+    701,  // Hawlucha
+    718,  // Zygarde
     719,  // Diancie
+    // Génération 7
+    780,  // Drampa
+    // Génération 8
+    870,  // Falinks
   ];
 
   // Liste des formes régionales par région
@@ -276,9 +304,11 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
     const apiSpecialForms = allForms.filter((form: any) => {
       const name = form.name.toLowerCase();
       
-      // Exclure les faux positifs
-      if (name.includes('meganium') || name.includes('yanmega') || 
-          name.includes('totem-alola') || name.includes('alola-cap')) {
+      // Exclure les faux positifs (mais garder meganium-mega)
+      if ((name.includes('meganium') && !name.includes('mega')) || 
+          name.includes('yanmega') || 
+          name.includes('totem-alola') || 
+          name.includes('alola-cap')) {
         return false;
       }
       
