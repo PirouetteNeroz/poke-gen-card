@@ -3,16 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { GenerationSelector } from "@/components/GenerationSelector";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { PokemonCard } from "@/components/PokemonCard";
 import TCGPlaceholder from "@/components/TCGPlaceholder";
 import { usePokemonData } from "@/hooks/usePokemonData";
-import { Download, Loader2, FileText, Globe, Sparkles, Search } from "lucide-react";
+import { SpriteStyle } from "@/types";
+import { Download, Loader2, FileText, Globe, Sparkles, Search, Image } from "lucide-react";
 
 const Index = () => {
   const [selectedGeneration, setSelectedGeneration] = useState<string>("1");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("fr");
+  const [spriteStyle, setSpriteStyle] = useState<SpriteStyle>("hd");
   
   const {
     pokemonList,
@@ -25,16 +29,16 @@ const Index = () => {
   } = usePokemonData();
 
   const handleGenerateChecklistPDF = useCallback(async () => {
-    await generateChecklistPokemonPDF(selectedGeneration, selectedLanguage);
-  }, [selectedGeneration, selectedLanguage, generateChecklistPokemonPDF]);
+    await generateChecklistPokemonPDF(selectedGeneration, selectedLanguage, spriteStyle);
+  }, [selectedGeneration, selectedLanguage, spriteStyle, generateChecklistPokemonPDF]);
 
   const handleGeneratePDF = useCallback(async () => {
-    await generatePokemonPDF(selectedGeneration, selectedLanguage);
-  }, [selectedGeneration, selectedLanguage, generatePokemonPDF]);
+    await generatePokemonPDF(selectedGeneration, selectedLanguage, spriteStyle);
+  }, [selectedGeneration, selectedLanguage, spriteStyle, generatePokemonPDF]);
 
   const handlePreviewGeneration = useCallback(async () => {
-    await loadPokemon(selectedGeneration, selectedLanguage);
-  }, [selectedGeneration, selectedLanguage, loadPokemon]);
+    await loadPokemon(selectedGeneration, selectedLanguage, spriteStyle);
+  }, [selectedGeneration, selectedLanguage, spriteStyle, loadPokemon]);
 
   const pokemonCount = useMemo(() => pokemonList.length, [pokemonList]);
 
@@ -78,7 +82,7 @@ const Index = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">
                       Génération
@@ -96,6 +100,24 @@ const Index = () => {
                       selectedLanguage={selectedLanguage}
                       onLanguageChange={setSelectedLanguage}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                      <Image className="w-4 h-4" />
+                      Style des sprites
+                    </label>
+                    <div className="flex items-center gap-3 h-10 px-3 bg-background border rounded-md">
+                      <span className={`text-sm ${spriteStyle === 'hd' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                        HD
+                      </span>
+                      <Switch
+                        checked={spriteStyle === 'pixel'}
+                        onCheckedChange={(checked) => setSpriteStyle(checked ? 'pixel' : 'hd')}
+                      />
+                      <span className={`text-sm ${spriteStyle === 'pixel' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                        Pixel
+                      </span>
+                    </div>
                   </div>
                 </div>
                 

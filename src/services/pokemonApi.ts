@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { SpriteStyle } from '@/types';
 
 const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2';
 
@@ -8,6 +9,16 @@ interface Pokemon {
   sprite: string;
   types: string[];
 }
+
+// Helper function to get sprite based on style preference
+const getSprite = (sprites: any, spriteStyle: SpriteStyle = 'hd'): string => {
+  if (spriteStyle === 'pixel') {
+    // Use pixel sprite (front_default) or fallback to HD
+    return sprites?.front_default || sprites?.other?.['official-artwork']?.front_default || '';
+  }
+  // HD style: use official artwork or fallback to pixel
+  return sprites?.other?.['official-artwork']?.front_default || sprites?.front_default || '';
+};
 
 interface PokemonApiResponse {
   id: number;
@@ -64,7 +75,7 @@ export const getGenerationRange = (generation: string): { start: number; end: nu
   return ranges[generation] || ranges["1"];
 };
 
-export const fetchSpecialForms = async (language: string, onProgress?: (progress: number) => void): Promise<Pokemon[]> => {
+export const fetchSpecialForms = async (language: string, spriteStyle: SpriteStyle = 'hd', onProgress?: (progress: number) => void): Promise<Pokemon[]> => {
   const specialForms: Pokemon[] = [];
   
   // Liste exhaustive et mise à jour des Pokémon Mega
@@ -208,7 +219,7 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
               megaForms.push({
                 id: megaData.id,
                 name: displayName,
-                sprite: megaData.sprites?.other?.['official-artwork']?.front_default || megaData.sprites?.front_default,
+                sprite: getSprite(megaData.sprites, spriteStyle),
                 types: megaData.types.map((type: any) => type.type.name),
               });
             } catch (error) {
@@ -268,7 +279,7 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
             return {
               id: regionalData.id,
               name: displayName,
-              sprite: regionalData.sprites?.other?.['official-artwork']?.front_default || regionalData.sprites?.front_default,
+              sprite: getSprite(regionalData.sprites, spriteStyle),
               types: regionalData.types.map((type: any) => type.type.name),
             };
           } catch (error) {
@@ -370,7 +381,9 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
           return {
             id: pokemonData.id,
             name: formName,
-            sprite: formData.sprites?.front_default || pokemonData.sprites?.other?.['official-artwork']?.front_default || pokemonData.sprites?.front_default,
+            sprite: spriteStyle === 'pixel' 
+              ? (formData.sprites?.front_default || pokemonData.sprites?.front_default || '')
+              : getSprite(pokemonData.sprites, spriteStyle),
             types: pokemonData.types.map((type: any) => type.type.name),
           };
         } catch (error) {
@@ -405,7 +418,7 @@ export const fetchSpecialForms = async (language: string, onProgress?: (progress
   return specialForms.sort((a, b) => a.id - b.id);
 };
 
-export const fetchPokemon = async (id: number, language: string): Promise<Pokemon[]> => {
+export const fetchPokemon = async (id: number, language: string, spriteStyle: SpriteStyle = 'hd'): Promise<Pokemon[]> => {
   try {
     // On récupère le Pokémon principal
     const response = await axios.get<PokemonApiResponse>(`${POKEAPI_BASE_URL}/pokemon/${id}`);
@@ -437,7 +450,7 @@ export const fetchPokemon = async (id: number, language: string): Promise<Pokemo
         forms.push({
           id: formData.id,
           name: formName,
-          sprite: formData.sprites.other['official-artwork'].front_default || formData.sprites.front_default,
+          sprite: getSprite(formData.sprites, spriteStyle),
           types: formData.types.map(type => type.type.name),
         });
       } catch (err) {
@@ -455,11 +468,12 @@ export const fetchPokemon = async (id: number, language: string): Promise<Pokemo
 export const fetchPokemonBatch = async (
   generation: string,
   language: string,
+  spriteStyle: SpriteStyle = 'hd',
   onProgress?: (progress: number) => void
 ): Promise<Pokemon[]> => {
   // Si c'est les formes spéciales, utiliser la fonction dédiée
   if (generation === 'special') {
-    return fetchSpecialForms(language, onProgress);
+    return fetchSpecialForms(language, spriteStyle, onProgress);
   }
 
   const { start, end } = getGenerationRange(generation);
@@ -471,7 +485,7 @@ export const fetchPokemonBatch = async (
     const batchPromises: Promise<Pokemon[]>[] = [];
 
     for (let j = i; j <= batchEnd; j++) {
-      batchPromises.push(fetchPokemon(j, language));
+      batchPromises.push(fetchPokemon(j, language, spriteStyle));
     }
 
     try {
