@@ -74,48 +74,42 @@ export const generatePDF = async (
       subtitle: 'Cartes de collection à découper',
       included: pokemonList.length > maxPokemon 
         ? `${limitedPokemonList.length} Pokémon inclus (sur ${pokemonList.length} total)`
-        : `${limitedPokemonList.length} Pokémon inclus`,
-      generated: `Généré le`
+        : `${limitedPokemonList.length} Pokémon inclus`
     },
     en: {
       title: generation === 'all' ? 'Pokédex Collection - All Generations' : `Pokédex Collection - Generation ${generation}`,
       subtitle: 'Trading cards to cut out',
       included: pokemonList.length > maxPokemon 
         ? `${limitedPokemonList.length} Pokémon included (out of ${pokemonList.length} total)`
-        : `${limitedPokemonList.length} Pokémon included`,
-      generated: `Generated on`
+        : `${limitedPokemonList.length} Pokémon included`
     },
     ja: {
       title: generation === 'all' ? 'ポケモン図鑑コレクション - 全世代' : `ポケモン図鑑コレクション - 第${generation}世代`,
       subtitle: '切り取り用トレーディングカード',
       included: pokemonList.length > maxPokemon 
         ? `${limitedPokemonList.length}匹のポケモンを含む（合計${pokemonList.length}匹中）`
-        : `${limitedPokemonList.length}匹のポケモンを含む`,
-      generated: `生成日`
+        : `${limitedPokemonList.length}匹のポケモンを含む`
     },
     de: {
       title: generation === 'all' ? 'Pokédex-Sammlung - Alle Generationen' : `Pokédex-Sammlung - Generation ${generation}`,
       subtitle: 'Sammelkarten zum Ausschneiden',
       included: pokemonList.length > maxPokemon 
         ? `${limitedPokemonList.length} Pokémon enthalten (von ${pokemonList.length} insgesamt)`
-        : `${limitedPokemonList.length} Pokémon enthalten`,
-      generated: `Erstellt am`
+        : `${limitedPokemonList.length} Pokémon enthalten`
     },
     es: {
       title: generation === 'all' ? 'Colección Pokédex - Todas las Generaciones' : `Colección Pokédex - Generación ${generation}`,
       subtitle: 'Cartas coleccionables para recortar',
       included: pokemonList.length > maxPokemon 
         ? `${limitedPokemonList.length} Pokémon incluidos (de ${pokemonList.length} en total)`
-        : `${limitedPokemonList.length} Pokémon incluidos`,
-      generated: `Generado el`
+        : `${limitedPokemonList.length} Pokémon incluidos`
     },
     it: {
       title: generation === 'all' ? 'Collezione Pokédex - Tutte le Generazioni' : `Collezione Pokédex - Generazione ${generation}`,
       subtitle: 'Carte da collezione da ritagliare',
       included: pokemonList.length > maxPokemon 
         ? `${limitedPokemonList.length} Pokémon inclusi (su ${pokemonList.length} totali)`
-        : `${limitedPokemonList.length} Pokémon inclusi`,
-      generated: `Generato il`
+        : `${limitedPokemonList.length} Pokémon inclusi`
     }
   };
 
@@ -152,12 +146,6 @@ export const generatePDF = async (
     pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(2);
     pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
-    
-    // Date de génération
-    pdf.setFontSize(10);
-    pdf.setTextColor(120, 120, 120);
-    const currentDate = new Date().toLocaleDateString(language === 'en' ? 'en-US' : language === 'ja' ? 'ja-JP' : language === 'de' ? 'de-DE' : language === 'es' ? 'es-ES' : language === 'it' ? 'it-IT' : 'fr-FR');
-    pdf.text(`${t.generated} ${currentDate}`, pageWidth / 2, pageHeight - 25, { align: 'center' });
   };
   
   addTitlePage();

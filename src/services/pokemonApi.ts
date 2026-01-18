@@ -424,41 +424,24 @@ export const fetchPokemon = async (id: number, language: string, spriteStyle: Sp
     const response = await axios.get<PokemonApiResponse>(`${POKEAPI_BASE_URL}/pokemon/${id}`);
     const data = response.data;
 
-    // On va chercher les variétés (formes régionales, etc.)
+    // On va chercher les informations d'espèce pour le nom localisé
     const speciesResponse = await axios.get<PokemonSpeciesResponse>(data.species.url);
-    const varieties = speciesResponse.data.varieties || [];
-
-    // On prépare une liste pour toutes les formes
-    const forms: Pokemon[] = [];
-
-    // On boucle sur chaque variété
-    for (const variety of varieties) {
-      try {
-        const formResponse = await axios.get<PokemonApiResponse>(variety.pokemon.url);
-        const formData = formResponse.data;
-
-        let formName = formData.name;
-        // Toujours récupérer le nom localisé depuis l'espèce
-        try {
-          const localizedSpeciesResponse = await axios.get<PokemonSpeciesResponse>(formData.species.url);
-          const nameEntry = localizedSpeciesResponse.data.names.find(n => n.language.name === language);
-          if (nameEntry) formName = nameEntry.name;
-        } catch (e) {
-          console.warn(`Pas de nom localisé pour ${formData.name}`);
-        }
-
-        forms.push({
-          id: formData.id,
-          name: formName,
-          sprite: getSprite(formData.sprites, spriteStyle),
-          types: formData.types.map(type => type.type.name),
-        });
-      } catch (err) {
-        console.warn(`Erreur lors du chargement de la forme ${variety.pokemon.name}`);
-      }
+    const speciesData = speciesResponse.data;
+    
+    // Récupérer le nom localisé
+    let localizedName = data.name;
+    const nameEntry = speciesData.names.find(n => n.language.name === language);
+    if (nameEntry) {
+      localizedName = nameEntry.name;
     }
 
-    return forms;
+    // Ne retourner que la forme de base (pas les variétés)
+    return [{
+      id: data.id,
+      name: localizedName,
+      sprite: getSprite(data.sprites, spriteStyle),
+      types: data.types.map(type => type.type.name),
+    }];
   } catch (error) {
     console.error(`Erreur fetchPokemon pour ${id}:`, error);
     throw error;
@@ -493,19 +476,8 @@ export const fetchPokemonBatch = async (
 
       for (const result of batchResults) {
         if (result.status === 'fulfilled') {
-          // Pour les générations normales, ne garder que la forme par défaut
-          const defaultForms = result.value.filter(pokemon => {
-            const name = pokemon.name.toLowerCase();
-            return !name.includes('mega') && 
-                   !name.includes('alola') && 
-                   !name.includes('galar') && 
-                   !name.includes('hisui') && 
-                   !name.includes('paldea') &&
-                   !name.includes('gmax') &&
-                   !name.includes('gigantamax') &&
-                   (!name.includes('-') || name.includes('nidoran') || name.includes('mr-mime') || name.includes('mime-jr'));
-          });
-          pokemonList.push(...defaultForms);
+          // Ajouter directement les formes de base (fetchPokemon ne retourne plus les variétés)
+          pokemonList.push(...result.value);
         }
       }
 
