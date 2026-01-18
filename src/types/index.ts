@@ -30,6 +30,8 @@ export interface TCGCard {
 
 export type PDFType = "sprites" | "complete" | "master" | "graded";
 
+export type SpriteStyle = "hd" | "pixel";
+
 export type APIService = "pokemon-tcg" | "tcgdex";
 
 export type Language = "en" | "fr" | "de" | "es" | "it" | "pt" | "ja";

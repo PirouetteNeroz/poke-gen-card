@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { fetchPokemonBatch } from "@/services/pokemonApi";
 import { generatePDF } from "@/services/pdfGenerator";
 import { generateChecklistPDF } from "@/services/checklistPdfGenerator";
-import { Pokemon, ProgressCallback } from "@/types";
+import { Pokemon, ProgressCallback, SpriteStyle } from "@/types";
 import { showErrorToast } from "@/utils/errorHandler";
 import { toast } from "sonner";
 
@@ -15,6 +15,7 @@ export const usePokemonData = () => {
   const loadPokemon = useCallback(async (
     generation: string,
     language: string,
+    spriteStyle: SpriteStyle = 'hd',
     onProgress?: ProgressCallback
   ): Promise<Pokemon[]> => {
     setIsLoading(true);
@@ -25,6 +26,7 @@ export const usePokemonData = () => {
       const pokemon = await fetchPokemonBatch(
         generation,
         language,
+        spriteStyle,
         (fetchProgress) => {
           setProgress(fetchProgress);
           onProgress?.(fetchProgress);
@@ -50,6 +52,7 @@ export const usePokemonData = () => {
   const generatePokemonPDF = useCallback(async (
     generation: string,
     language: string,
+    spriteStyle: SpriteStyle = 'hd',
     onProgress?: ProgressCallback
   ): Promise<void> => {
     setIsLoading(true);
@@ -60,6 +63,7 @@ export const usePokemonData = () => {
       const pokemon = await fetchPokemonBatch(
         generation,
         language,
+        spriteStyle,
         (fetchProgress) => {
           setProgress(fetchProgress * 0.8);
           onProgress?.(fetchProgress * 0.8);
@@ -99,6 +103,7 @@ export const usePokemonData = () => {
   const generateChecklistPokemonPDF = useCallback(async (
     generation: string,
     language: string,
+    spriteStyle: SpriteStyle = 'hd',
     onProgress?: ProgressCallback
   ): Promise<void> => {
     setIsLoading(true);
@@ -109,6 +114,7 @@ export const usePokemonData = () => {
       const pokemonData = await fetchPokemonBatch(
         generation,
         language,
+        spriteStyle,
         (fetchProgress) => {
           if (fetchProgress <= 50) {
             setProgress(fetchProgress);
