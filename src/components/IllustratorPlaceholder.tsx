@@ -46,12 +46,24 @@ const IllustratorPlaceholder = () => {
       let hasMore = true;
 
       while (hasMore) {
+        // Build the query without double-encoding
+        const query = `artist:"${illustratorName}"`;
+        const endpoint = `/cards?q=${encodeURIComponent(query)}&page=${page}&pageSize=250`;
+        
         const { data, error } = await supabase.functions.invoke('pokemon-tcg-proxy', {
-          body: { endpoint: `/cards?q=artist:"${encodeURIComponent(illustratorName)}"&page=${page}&pageSize=250` }
+          body: { endpoint }
         });
 
         if (error) {
+          // Check if it's a temporary server error
+          if (error.message?.includes('503') || error.message?.includes('504') || error.message?.includes('indisponible')) {
+            throw new Error("L'API Pokémon TCG est temporairement indisponible. Veuillez réessayer dans quelques instants.");
+          }
           throw new Error(error.message || "Erreur lors de la recherche");
+        }
+
+        if (!data?.data) {
+          throw new Error("Réponse invalide de l'API");
         }
 
         allCards.push(...data.data);
