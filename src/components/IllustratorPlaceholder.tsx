@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Download, Loader2, Search, Palette, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TCGCard {
   id: string;
@@ -45,15 +46,14 @@ const IllustratorPlaceholder = () => {
       let hasMore = true;
 
       while (hasMore) {
-        const response = await fetch(
-          `https://api.pokemontcg.io/v2/cards?q=artist:"${encodeURIComponent(illustratorName)}"&page=${page}&pageSize=250`
-        );
+        const { data, error } = await supabase.functions.invoke('pokemon-tcg-proxy', {
+          body: { endpoint: `/cards?q=artist:"${encodeURIComponent(illustratorName)}"&page=${page}&pageSize=250` }
+        });
 
-        if (!response.ok) {
-          throw new Error("Erreur lors de la recherche");
+        if (error) {
+          throw new Error(error.message || "Erreur lors de la recherche");
         }
 
-        const data = await response.json();
         allCards.push(...data.data);
 
         setProgress((page * 25) % 90);
@@ -100,7 +100,7 @@ const IllustratorPlaceholder = () => {
 
     setIsLoading(true);
     setProgress(0);
-    setCurrentStep("Génération du PDF...");
+    setCurrentStep("Génération du PDF avec images...");
 
     try {
       const { jsPDF } = await import("jspdf");
@@ -111,58 +111,75 @@ const IllustratorPlaceholder = () => {
       });
 
       const pageWidth = 210;
-      const pageHeight = 297;
       const margin = 10;
       const cardWidth = (pageWidth - 2 * margin - 2 * 5) / 3;
       const cardHeight = cardWidth * 1.4;
       const gap = 5;
 
-      let currentX = margin;
-      let currentY = margin;
       let cardIndex = 0;
+
+      // Helper function to load image as base64
+      const loadImage = async (url: string): Promise<string | null> => {
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        } catch {
+          return null;
+        }
+      };
 
       for (let i = 0; i < cards.length; i++) {
         const card = cards[i];
 
         if (cardIndex > 0 && cardIndex % 9 === 0) {
           doc.addPage();
-          currentX = margin;
-          currentY = margin;
         }
 
         const col = cardIndex % 3;
         const row = Math.floor((cardIndex % 9) / 3);
-        currentX = margin + col * (cardWidth + gap);
-        currentY = margin + row * (cardHeight + gap);
+        const currentX = margin + col * (cardWidth + gap);
+        const currentY = margin + row * (cardHeight + gap);
 
-        // Fond de la carte
-        doc.setFillColor(245, 245, 245);
-        doc.roundedRect(currentX, currentY, cardWidth, cardHeight, 3, 3, "F");
-
-        // Bordure
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.5);
-        doc.roundedRect(currentX, currentY, cardWidth, cardHeight, 3, 3, "S");
-
-        // Nom de la carte
-        doc.setFontSize(8);
-        doc.setTextColor(50, 50, 50);
-        const cardName = card.name.length > 20 ? card.name.substring(0, 18) + "..." : card.name;
-        doc.text(cardName, currentX + cardWidth / 2, currentY + 8, { align: "center" });
-
-        // Set et numéro
-        doc.setFontSize(7);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`${card.set.name}`, currentX + cardWidth / 2, currentY + cardHeight - 12, { align: "center" });
-        doc.text(`#${card.number}`, currentX + cardWidth / 2, currentY + cardHeight - 6, { align: "center" });
-
-        // Illustrateur
-        doc.setFontSize(6);
-        doc.setTextColor(150, 100, 50);
-        doc.text(card.artist || "", currentX + cardWidth / 2, currentY + cardHeight - 18, { align: "center" });
+        // Try to load card image
+        if (card.images?.small) {
+          const imageData = await loadImage(card.images.small);
+          if (imageData) {
+            try {
+              doc.addImage(imageData, "PNG", currentX, currentY, cardWidth, cardHeight);
+            } catch {
+              // Fallback to placeholder if image fails
+              doc.setFillColor(245, 245, 245);
+              doc.roundedRect(currentX, currentY, cardWidth, cardHeight, 3, 3, "F");
+              doc.setFontSize(7);
+              doc.setTextColor(100, 100, 100);
+              doc.text(card.name, currentX + cardWidth / 2, currentY + cardHeight / 2, { align: "center" });
+            }
+          } else {
+            // Fallback placeholder
+            doc.setFillColor(245, 245, 245);
+            doc.roundedRect(currentX, currentY, cardWidth, cardHeight, 3, 3, "F");
+            doc.setFontSize(7);
+            doc.setTextColor(100, 100, 100);
+            doc.text(card.name, currentX + cardWidth / 2, currentY + cardHeight / 2, { align: "center" });
+          }
+        } else {
+          // No image available - placeholder
+          doc.setFillColor(245, 245, 245);
+          doc.roundedRect(currentX, currentY, cardWidth, cardHeight, 3, 3, "F");
+          doc.setFontSize(7);
+          doc.setTextColor(100, 100, 100);
+          doc.text(card.name, currentX + cardWidth / 2, currentY + cardHeight / 2, { align: "center" });
+        }
 
         cardIndex++;
         setProgress((i / cards.length) * 100);
+        setCurrentStep(`Traitement ${i + 1}/${cards.length} cartes...`);
       }
 
       doc.save(`illustrator_${illustratorName.replace(/\s+/g, "_")}.pdf`);
@@ -275,20 +292,34 @@ const IllustratorPlaceholder = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[500px] overflow-y-auto">
-              {cards.slice(0, 100).map((card) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[600px] overflow-y-auto">
+              {cards.slice(0, 150).map((card) => (
                 <div
                   key={card.id}
-                  className="bg-muted rounded-lg p-2 text-center hover:shadow-md transition-shadow"
+                  className="bg-muted rounded-lg overflow-hidden hover:shadow-md transition-shadow"
                 >
-                  <p className="text-xs font-medium truncate">{card.name}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{card.set.name}</p>
-                  <p className="text-[10px] text-muted-foreground">#{card.number}</p>
+                  {card.images?.small ? (
+                    <img 
+                      src={card.images.small} 
+                      alt={card.name}
+                      className="w-full h-auto"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="aspect-[2.5/3.5] bg-muted-foreground/10 flex items-center justify-center">
+                      <span className="text-xs text-muted-foreground">No image</span>
+                    </div>
+                  )}
+                  <div className="p-2 text-center">
+                    <p className="text-xs font-medium truncate">{card.name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{card.set.name}</p>
+                    <p className="text-[10px] text-muted-foreground">#{card.number}</p>
+                  </div>
                 </div>
               ))}
-              {cards.length > 100 && (
+              {cards.length > 150 && (
                 <div className="col-span-full text-center text-sm text-muted-foreground py-4">
-                  ... et {cards.length - 100} autres cartes
+                  ... et {cards.length - 150} autres cartes
                 </div>
               )}
             </div>
