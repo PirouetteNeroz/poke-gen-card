@@ -8,10 +8,9 @@ import { Label } from "@/components/ui/label";
 import { GenerationSelector } from "@/components/GenerationSelector";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { PokemonCard } from "@/components/PokemonCard";
-import TCGPlaceholder from "@/components/TCGPlaceholder";
 import { usePokemonData } from "@/hooks/usePokemonData";
 import { SpriteStyle } from "@/types";
-import { Download, Loader2, FileText, Globe, Sparkles, Search, Image, Palette } from "lucide-react";
+import { Download, Loader2, FileText, Globe, Sparkles, Image, Palette } from "lucide-react";
 import IllustratorPlaceholder from "@/components/IllustratorPlaceholder";
 
 const Index = () => {
@@ -62,14 +61,10 @@ const Index = () => {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="pokemon" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="pokemon" className="flex items-center gap-2">
               <Sparkles className="w-4 h-4" />
               Pokémon
-            </TabsTrigger>
-            <TabsTrigger value="tcg" className="flex items-center gap-2">
-              <Search className="w-4 h-4" />
-              TCG Séries
             </TabsTrigger>
             <TabsTrigger value="illustrator" className="flex items-center gap-2">
               <Palette className="w-4 h-4" />
@@ -244,10 +239,6 @@ const Index = () => {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-
-          <TabsContent value="tcg">
-            <TCGPlaceholder />
           </TabsContent>
 
           <TabsContent value="illustrator">

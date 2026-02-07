@@ -48,7 +48,7 @@ const IllustratorPlaceholder = () => {
       while (hasMore) {
         // Build the query without double-encoding
         const query = `artist:"${illustratorName}"`;
-        const endpoint = `/cards?q=${encodeURIComponent(query)}&page=${page}&pageSize=250`;
+        const endpoint = `/cards?q=${encodeURIComponent(query)}&page=${page}&pageSize=50`;
         
         const { data, error } = await supabase.functions.invoke('pokemon-tcg-proxy', {
           body: { endpoint }
@@ -71,7 +71,7 @@ const IllustratorPlaceholder = () => {
         setProgress((page * 25) % 90);
         setCurrentStep(`${allCards.length} cartes trouvées...`);
 
-        if (data.data.length < 250) {
+        if (data.data.length < 50) {
           hasMore = false;
         } else {
           page++;
