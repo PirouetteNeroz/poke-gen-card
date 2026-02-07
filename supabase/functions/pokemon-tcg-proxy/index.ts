@@ -5,44 +5,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function fetchWithRetry(url: string, maxRetries = 2): Promise<Response> {
-  let lastError: Error | null = null;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`Attempt ${attempt}/${maxRetries}: Fetching ${url}`);
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout per request
-      
-      const response = await fetch(url, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      // If we get a 5xx error, retry
-      if (response.status >= 500 && attempt < maxRetries) {
-        console.log(`Got ${response.status}, retrying in 500ms...`);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        continue;
-      }
-      
-      return response;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      console.error(`Attempt ${attempt} failed:`, lastError.message);
-      
-      if (attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
-  }
-  
-  throw lastError || new Error("All retry attempts failed");
+async function fetchAPI(url: string): Promise<Response> {
+  console.log(`Fetching: ${url}`);
+  return await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 serve(async (req) => {
@@ -68,7 +35,7 @@ serve(async (req) => {
     
     console.log("Final URL:", fullUrl);
     
-    const response = await fetchWithRetry(fullUrl);
+    const response = await fetchAPI(fullUrl);
 
     if (!response.ok) {
       const errorText = await response.text();

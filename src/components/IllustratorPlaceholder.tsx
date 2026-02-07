@@ -5,21 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Download, Loader2, Search, Palette, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 interface TCGCard {
   id: string;
   name: string;
-  number: string;
-  set: {
-    name: string;
-    id: string;
-  };
-  artist?: string;
-  images?: {
-    small: string;
-    large: string;
-  };
+  localId: string;
+  image: string;
 }
 
 const IllustratorPlaceholder = () => {
@@ -41,62 +32,35 @@ const IllustratorPlaceholder = () => {
     setCards([]);
 
     try {
-      const allCards: TCGCard[] = [];
-      let page = 1;
-      let hasMore = true;
+      setProgress(30);
+      const response = await fetch(
+        `https://api.tcgdex.net/v2/en/cards?illustrator=${encodeURIComponent(illustratorName)}`
+      );
 
-      while (hasMore) {
-        // Build the query without double-encoding
-        const query = `artist:"${illustratorName}"`;
-        const endpoint = `/cards?q=${encodeURIComponent(query)}&page=${page}&pageSize=50`;
-        
-        const { data, error } = await supabase.functions.invoke('pokemon-tcg-proxy', {
-          body: { endpoint }
-        });
-
-        if (error) {
-          console.error("Edge function error:", JSON.stringify(error));
-          throw new Error("L'API Pokémon TCG est temporairement indisponible. Veuillez réessayer dans quelques instants.");
-        }
-
-        // Check if the response contains an error
-        if (data?.error) {
-          console.error("API error response:", data.error);
-          throw new Error(data.error);
-        }
-
-        if (!data?.data) {
-          console.error("Unexpected response format:", JSON.stringify(data).substring(0, 200));
-          throw new Error("Réponse invalide de l'API");
-        }
-
-        allCards.push(...data.data);
-
-        setProgress((page * 25) % 90);
-        setCurrentStep(`${allCards.length} cartes trouvées...`);
-
-        if (data.data.length < 50) {
-          hasMore = false;
-        } else {
-          page++;
-        }
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
       }
 
-      // Trier par set puis par numéro
-      allCards.sort((a, b) => {
-        const setCompare = a.set.name.localeCompare(b.set.name);
-        if (setCompare !== 0) return setCompare;
-        return parseInt(a.number) - parseInt(b.number);
-      });
+      const data: TCGCard[] = await response.json();
 
-      setCards(allCards);
+      if (!Array.isArray(data)) {
+        throw new Error("Réponse invalide de l'API");
+      }
+
+      setProgress(80);
+      setCurrentStep(`${data.length} cartes trouvées...`);
+
+      // Sort by name
+      data.sort((a, b) => a.name.localeCompare(b.name));
+
+      setCards(data);
       setProgress(100);
       setCurrentStep("Recherche terminée !");
 
-      if (allCards.length === 0) {
+      if (data.length === 0) {
         toast.info("Aucune carte trouvée pour cet illustrateur");
       } else {
-        toast.success(`${allCards.length} cartes trouvées pour ${illustratorName}`);
+        toast.success(`${data.length} cartes trouvées pour ${illustratorName}`);
       }
     } catch (error) {
       console.error("Error searching by illustrator:", error);
@@ -163,13 +127,13 @@ const IllustratorPlaceholder = () => {
         const currentY = margin + row * (cardHeight + gap);
 
         // Try to load card image
-        if (card.images?.small) {
-          const imageData = await loadImage(card.images.small);
+        if (card.image) {
+          const imageUrl = `${card.image}/high.png`;
+          const imageData = await loadImage(imageUrl);
           if (imageData) {
             try {
               doc.addImage(imageData, "PNG", currentX, currentY, cardWidth, cardHeight);
             } catch {
-              // Fallback to placeholder if image fails
               doc.setFillColor(245, 245, 245);
               doc.roundedRect(currentX, currentY, cardWidth, cardHeight, 3, 3, "F");
               doc.setFontSize(7);
@@ -177,7 +141,6 @@ const IllustratorPlaceholder = () => {
               doc.text(card.name, currentX + cardWidth / 2, currentY + cardHeight / 2, { align: "center" });
             }
           } else {
-            // Fallback placeholder
             doc.setFillColor(245, 245, 245);
             doc.roundedRect(currentX, currentY, cardWidth, cardHeight, 3, 3, "F");
             doc.setFontSize(7);
@@ -185,7 +148,6 @@ const IllustratorPlaceholder = () => {
             doc.text(card.name, currentX + cardWidth / 2, currentY + cardHeight / 2, { align: "center" });
           }
         } else {
-          // No image available - placeholder
           doc.setFillColor(245, 245, 245);
           doc.roundedRect(currentX, currentY, cardWidth, cardHeight, 3, 3, "F");
           doc.setFontSize(7);
@@ -314,9 +276,9 @@ const IllustratorPlaceholder = () => {
                   key={card.id}
                   className="bg-muted rounded-lg overflow-hidden hover:shadow-md transition-shadow"
                 >
-                  {card.images?.small ? (
+                  {card.image ? (
                     <img 
-                      src={card.images.small} 
+                      src={`${card.image}/low.png`} 
                       alt={card.name}
                       className="w-full h-auto"
                       loading="lazy"
@@ -328,8 +290,7 @@ const IllustratorPlaceholder = () => {
                   )}
                   <div className="p-2 text-center">
                     <p className="text-xs font-medium truncate">{card.name}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{card.set.name}</p>
-                    <p className="text-[10px] text-muted-foreground">#{card.number}</p>
+                    <p className="text-[10px] text-muted-foreground">#{card.localId}</p>
                   </div>
                 </div>
               ))}
