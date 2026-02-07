@@ -55,14 +55,18 @@ const IllustratorPlaceholder = () => {
         });
 
         if (error) {
-          // Check if it's a temporary server error
-          if (error.message?.includes('503') || error.message?.includes('504') || error.message?.includes('indisponible')) {
-            throw new Error("L'API Pokémon TCG est temporairement indisponible. Veuillez réessayer dans quelques instants.");
-          }
-          throw new Error(error.message || "Erreur lors de la recherche");
+          console.error("Edge function error:", JSON.stringify(error));
+          throw new Error("L'API Pokémon TCG est temporairement indisponible. Veuillez réessayer dans quelques instants.");
+        }
+
+        // Check if the response contains an error
+        if (data?.error) {
+          console.error("API error response:", data.error);
+          throw new Error(data.error);
         }
 
         if (!data?.data) {
+          console.error("Unexpected response format:", JSON.stringify(data).substring(0, 200));
           throw new Error("Réponse invalide de l'API");
         }
 

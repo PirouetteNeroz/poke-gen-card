@@ -5,23 +5,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
+async function fetchWithRetry(url: string, maxRetries = 2): Promise<Response> {
   let lastError: Error | null = null;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`Attempt ${attempt}/${maxRetries}: Fetching ${url}`);
       
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout per request
+      
       const response = await fetch(url, {
         headers: {
           "Content-Type": "application/json",
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       // If we get a 5xx error, retry
       if (response.status >= 500 && attempt < maxRetries) {
-        console.log(`Got ${response.status}, retrying in ${attempt * 1000}ms...`);
-        await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+        console.log(`Got ${response.status}, retrying in 500ms...`);
+        await new Promise(resolve => setTimeout(resolve, 500));
         continue;
       }
       
@@ -31,7 +37,7 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
       console.error(`Attempt ${attempt} failed:`, lastError.message);
       
       if (attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
   }
