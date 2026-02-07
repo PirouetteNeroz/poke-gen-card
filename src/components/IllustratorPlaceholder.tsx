@@ -50,8 +50,8 @@ const IllustratorPlaceholder = () => {
       setProgress(80);
       setCurrentStep(`${data.length} cartes trouvées...`);
 
-      // Sort by name
-      data.sort((a, b) => a.name.localeCompare(b.name));
+      // Sort by ID (oldest first - lower IDs are older sets)
+      data.sort((a, b) => a.id.localeCompare(b.id));
 
       setCards(data);
       setProgress(100);
@@ -91,10 +91,12 @@ const IllustratorPlaceholder = () => {
       });
 
       const pageWidth = 210;
-      const margin = 10;
-      const cardWidth = (pageWidth - 2 * margin - 2 * 5) / 3;
-      const cardHeight = cardWidth * 1.4;
-      const gap = 5;
+      const pageHeight = 297;
+      const margin = 5;
+      // Standard card ratio 63x88mm - fit 3 columns x 3 rows with no gap for easy cutting
+      const cardWidth = (pageWidth - 2 * margin) / 3;
+      const cardHeight = cardWidth * (88 / 63);
+      const gap = 0;
 
       let cardIndex = 0;
 
@@ -160,9 +162,27 @@ const IllustratorPlaceholder = () => {
         setCurrentStep(`Traitement ${i + 1}/${cards.length} cartes...`);
       }
 
-      doc.save(`illustrator_${illustratorName.replace(/\s+/g, "_")}.pdf`);
+      // Draw cut lines on each page
+      const totalPages = doc.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        // Vertical cut lines
+        for (let c = 0; c <= 3; c++) {
+          const x = margin + c * cardWidth;
+          doc.line(x, margin, x, margin + 3 * cardHeight);
+        }
+        // Horizontal cut lines
+        for (let r = 0; r <= 3; r++) {
+          const y = margin + r * cardHeight;
+          doc.line(margin, y, margin + 3 * cardWidth, y);
+        }
+      }
+
+      doc.save(`placeholder_${illustratorName.replace(/\s+/g, "_")}.pdf`);
       setProgress(100);
-      toast.success("PDF généré avec succès !");
+      toast.success("PDF placeholder généré avec succès !");
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast.error("Erreur lors de la génération du PDF");
