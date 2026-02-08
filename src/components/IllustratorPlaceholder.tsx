@@ -156,8 +156,10 @@ const IllustratorPlaceholder = () => {
           if (imageData) {
             try {
               doc.addImage(imageData, "PNG", currentX, currentY, cardWidth, cardHeight);
-              // Add card name and number with white background
-              const label = `${card.name} #${card.localId}`;
+              // Add set name and card number with white background
+              const setParts = card.id.split('-');
+              const setName = setParts.slice(0, -1).join('-');
+              const label = `${setName} #${card.localId}`;
               doc.setFontSize(7);
               const textWidth = doc.getTextWidth(label);
               const textHeight = 3.5;
