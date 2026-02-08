@@ -32,20 +32,36 @@ const IllustratorPlaceholder = () => {
     setCards([]);
 
     try {
-      setProgress(30);
-      const response = await fetch(
-        `https://api.tcgdex.net/v2/en/cards?illustrator=${encodeURIComponent(illustratorName)}`
-      );
+      setProgress(20);
+      setCurrentStep("Chargement des sets anglais...");
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+      // Fetch English sets to filter cards
+      const [cardsResponse, setsResponse] = await Promise.all([
+        fetch(`https://api.tcgdex.net/v2/en/cards?illustrator=${encodeURIComponent(illustratorName)}`),
+        fetch(`https://api.tcgdex.net/v2/en/sets`),
+      ]);
+
+      if (!cardsResponse.ok) {
+        throw new Error(`API error: ${cardsResponse.status}`);
       }
 
-      const data: TCGCard[] = await response.json();
+      const allCards: TCGCard[] = await cardsResponse.json();
+      const sets: { id: string }[] = setsResponse.ok ? await setsResponse.json() : [];
 
-      if (!Array.isArray(data)) {
+      if (!Array.isArray(allCards)) {
         throw new Error("Réponse invalide de l'API");
       }
+
+      setProgress(50);
+      setCurrentStep("Filtrage des sets anglais...");
+
+      // Keep only cards whose set prefix matches an English set ID
+      const englishSetIds = new Set(sets.map((s) => s.id));
+      const data = allCards.filter((card) => {
+        const setParts = card.id.split('-');
+        const setId = setParts.slice(0, -1).join('-');
+        return englishSetIds.has(setId);
+      });
 
       setProgress(80);
       setCurrentStep(`${data.length} cartes trouvées...`);
