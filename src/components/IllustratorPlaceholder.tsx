@@ -50,8 +50,17 @@ const IllustratorPlaceholder = () => {
       setProgress(80);
       setCurrentStep(`${data.length} cartes trouvées...`);
 
-      // Sort by ID (oldest first - lower IDs are older sets)
-      data.sort((a, b) => a.id.localeCompare(b.id));
+      // Sort chronologically: extract set prefix and card number for proper ordering
+      data.sort((a, b) => {
+        const partsA = a.id.split('-');
+        const partsB = b.id.split('-');
+        const setA = partsA.slice(0, -1).join('-');
+        const setB = partsB.slice(0, -1).join('-');
+        if (setA !== setB) return setA.localeCompare(setB);
+        const numA = parseInt(partsA[partsA.length - 1]) || 0;
+        const numB = parseInt(partsB[partsB.length - 1]) || 0;
+        return numA - numB;
+      });
 
       setCards(data);
       setProgress(100);
@@ -92,11 +101,22 @@ const IllustratorPlaceholder = () => {
 
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 5;
-      // Standard card ratio 63x88mm - fit 3 columns x 3 rows with no gap for easy cutting
-      const cardWidth = (pageWidth - 2 * margin) / 3;
-      const cardHeight = cardWidth * (88 / 63);
-      const gap = 0;
+      // Exact card dimensions in mm
+      const cardWidth = 63.5;
+      const cardHeight = 88.9;
+      // Center the 3-column grid on the page
+      const marginX = (pageWidth - 3 * cardWidth) / 2;
+      const marginY = (pageHeight - 3 * cardHeight) / 2;
+
+      // Title page
+      doc.setFontSize(28);
+      doc.setTextColor(50, 50, 50);
+      doc.text(illustratorName, pageWidth / 2, pageHeight / 2 - 10, { align: "center" });
+      doc.setFontSize(14);
+      doc.setTextColor(120, 120, 120);
+      doc.text(`${cards.length} cartes`, pageWidth / 2, pageHeight / 2 + 10, { align: "center" });
+      doc.setFontSize(10);
+      doc.text("Placeholder PDF", pageWidth / 2, pageHeight / 2 + 22, { align: "center" });
 
       let cardIndex = 0;
 
@@ -119,14 +139,15 @@ const IllustratorPlaceholder = () => {
       for (let i = 0; i < cards.length; i++) {
         const card = cards[i];
 
-        if (cardIndex > 0 && cardIndex % 9 === 0) {
+        // First card or every 9 cards: new page (skip title page logic since we already have one)
+        if (cardIndex === 0 || cardIndex % 9 === 0) {
           doc.addPage();
         }
 
         const col = cardIndex % 3;
         const row = Math.floor((cardIndex % 9) / 3);
-        const currentX = margin + col * (cardWidth + gap);
-        const currentY = margin + row * (cardHeight + gap);
+        const currentX = marginX + col * cardWidth;
+        const currentY = marginY + row * cardHeight;
 
         // Try to load card image
         if (card.image) {
@@ -162,21 +183,19 @@ const IllustratorPlaceholder = () => {
         setCurrentStep(`Traitement ${i + 1}/${cards.length} cartes...`);
       }
 
-      // Draw cut lines on each page
+      // Draw cut lines on each page (skip title page = page 1)
       const totalPages = doc.getNumberOfPages();
-      for (let p = 1; p <= totalPages; p++) {
+      for (let p = 2; p <= totalPages; p++) {
         doc.setPage(p);
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.2);
-        // Vertical cut lines
         for (let c = 0; c <= 3; c++) {
-          const x = margin + c * cardWidth;
-          doc.line(x, margin, x, margin + 3 * cardHeight);
+          const x = marginX + c * cardWidth;
+          doc.line(x, marginY, x, marginY + 3 * cardHeight);
         }
-        // Horizontal cut lines
         for (let r = 0; r <= 3; r++) {
-          const y = margin + r * cardHeight;
-          doc.line(margin, y, margin + 3 * cardWidth, y);
+          const y = marginY + r * cardHeight;
+          doc.line(marginX, y, marginX + 3 * cardWidth, y);
         }
       }
 
