@@ -156,6 +156,12 @@ const IllustratorPlaceholder = () => {
           if (imageData) {
             try {
               doc.addImage(imageData, "PNG", currentX, currentY, cardWidth, cardHeight);
+              // Add set name and card number at bottom-left
+              const setParts = card.id.split('-');
+              const setName = setParts.slice(0, -1).join('-');
+              doc.setFontSize(5);
+              doc.setTextColor(80, 80, 80);
+              doc.text(`${setName} #${card.localId}`, currentX + 2, currentY + cardHeight - 2);
             } catch {
               doc.setFillColor(245, 245, 245);
               doc.roundedRect(currentX, currentY, cardWidth, cardHeight, 3, 3, "F");
