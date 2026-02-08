@@ -156,12 +156,17 @@ const IllustratorPlaceholder = () => {
           if (imageData) {
             try {
               doc.addImage(imageData, "PNG", currentX, currentY, cardWidth, cardHeight);
-              // Add set name and card number at bottom-left
-              const setParts = card.id.split('-');
-              const setName = setParts.slice(0, -1).join('-');
-              doc.setFontSize(5);
-              doc.setTextColor(80, 80, 80);
-              doc.text(`${setName} #${card.localId}`, currentX + 2, currentY + cardHeight - 2);
+              // Add card name and number with white background
+              const label = `${card.name} #${card.localId}`;
+              doc.setFontSize(7);
+              const textWidth = doc.getTextWidth(label);
+              const textHeight = 3.5;
+              const labelX = currentX + 1.5;
+              const labelY = currentY + cardHeight - 4;
+              doc.setFillColor(255, 255, 255);
+              doc.rect(labelX - 0.5, labelY - textHeight + 0.5, textWidth + 1, textHeight + 1, "F");
+              doc.setTextColor(0, 0, 0);
+              doc.text(label, labelX, labelY);
             } catch {
               doc.setFillColor(245, 245, 245);
               doc.roundedRect(currentX, currentY, cardWidth, cardHeight, 3, 3, "F");
