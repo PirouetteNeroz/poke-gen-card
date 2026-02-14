@@ -50,11 +50,19 @@ const IllustratorPlaceholder = () => {
         throw new Error("Réponse invalide de l'API");
       }
 
+      // Filter out TCG Pocket cards (sets like A1, A1a, A2, A2a, A2b, B1, P-A, etc.)
+      const tcgPocketPattern = /^(A\d|B\d|P-A)/i;
+      const filtered = data.filter((card) => {
+        const setParts = card.id.split('-');
+        const setId = setParts.slice(0, -1).join('-');
+        return !tcgPocketPattern.test(setId);
+      });
+
       setProgress(80);
-      setCurrentStep(`${data.length} cartes trouvées...`);
+      setCurrentStep(`${filtered.length} cartes trouvées...`);
 
       // Sort chronologically: extract set prefix and card number for proper ordering
-      data.sort((a, b) => {
+      filtered.sort((a, b) => {
         const partsA = a.id.split('-');
         const partsB = b.id.split('-');
         const setA = partsA.slice(0, -1).join('-');
@@ -65,14 +73,14 @@ const IllustratorPlaceholder = () => {
         return numA - numB;
       });
 
-      setCards(data);
+      setCards(filtered);
       setProgress(100);
       setCurrentStep("Recherche terminée !");
 
-      if (data.length === 0) {
+      if (filtered.length === 0) {
         toast.info("Aucune carte trouvée pour cet illustrateur");
       } else {
-        toast.success(`${data.length} cartes trouvées pour ${illustratorName}`);
+        toast.success(`${filtered.length} cartes trouvées pour ${illustratorName}`);
       }
     } catch (error) {
       console.error("Error searching by illustrator:", error);
