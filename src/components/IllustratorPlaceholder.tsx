@@ -126,9 +126,6 @@ const IllustratorPlaceholder = () => {
       doc.setFontSize(16);
       doc.setTextColor(100, 100, 100);
       doc.text(`${cards.length} cartes`, pageWidth / 2, pageHeight / 2 + 8, { align: "center" });
-      doc.setFontSize(10);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Généré le ${new Date().toLocaleDateString("fr-FR")}`, pageWidth / 2, pageHeight / 2 + 20, { align: "center" });
 
       let cardIndex = 0;
 
@@ -172,10 +169,10 @@ const IllustratorPlaceholder = () => {
               const setParts = card.id.split('-');
               const setName = setParts.slice(0, -1).join('-');
               const label = `${setName} #${card.localId}`;
-              doc.setFontSize(6);
+              doc.setFontSize(7);
               const textWidth = doc.getTextWidth(label);
-              const textHeight = 3;
-              const labelX = currentX + 1;
+              const textHeight = 3.5;
+              const labelX = currentX + cardWidth - textWidth - 1.5;
               const labelY = currentY + cardHeight - 2;
               doc.setFillColor(255, 255, 255);
               doc.setGState(new (doc as any).GState({ opacity: 0.85 }));
