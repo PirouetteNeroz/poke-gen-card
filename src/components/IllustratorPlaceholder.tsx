@@ -58,20 +58,40 @@ const IllustratorPlaceholder = () => {
         return !tcgPocketPattern.test(setId);
       });
 
-      setProgress(80);
-      setCurrentStep(`${filtered.length} cartes trouvées...`);
+      setProgress(60);
+      setCurrentStep(`${filtered.length} cartes trouvées, tri par date de sortie...`);
 
-      // Sort chronologically: extract set prefix and card number for proper ordering
+      // Fetch set list to get release order
+      let setOrderMap: Record<string, number> = {};
+      try {
+        const setsResponse = await fetch("https://api.tcgdex.net/v2/en/sets");
+        if (setsResponse.ok) {
+          const sets: { id: string }[] = await setsResponse.json();
+          sets.forEach((s, index) => {
+            setOrderMap[s.id] = index;
+          });
+        }
+      } catch {
+        // Fallback to alphabetical if sets fetch fails
+      }
+
+      // Sort by release order (set index), then by card number within a set
       filtered.sort((a, b) => {
         const partsA = a.id.split('-');
         const partsB = b.id.split('-');
         const setA = partsA.slice(0, -1).join('-');
         const setB = partsB.slice(0, -1).join('-');
-        if (setA !== setB) return setA.localeCompare(setB);
+        if (setA !== setB) {
+          const orderA = setOrderMap[setA] ?? 99999;
+          const orderB = setOrderMap[setB] ?? 99999;
+          return orderA - orderB;
+        }
         const numA = parseInt(partsA[partsA.length - 1]) || 0;
         const numB = parseInt(partsB[partsB.length - 1]) || 0;
         return numA - numB;
       });
+
+      setProgress(80);
 
       setCards(filtered);
       setProgress(100);
